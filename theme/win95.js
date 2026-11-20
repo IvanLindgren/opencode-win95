@@ -118,6 +118,7 @@ class OpenCode95Desktop {
 
     this.buildShell()
     this.registerGlobalEvents()
+    this.hookNativeThemeSelect()
     this.observeTitle()
     this.startClock()
     this.renderTaskbarWindows()
@@ -1831,6 +1832,179 @@ class OpenCode95Desktop {
       month: "long",
       day: "numeric"
     })
+  }
+
+  hookNativeThemeSelect() {
+    const syncListbox = () => {
+      const trig = document.querySelector('[data-action="settings-theme"] [data-component="select-v2"]')
+      if (!trig) return
+      const controlsId = trig.getAttribute("aria-controls")
+      if (!controlsId) return
+      const listbox = document.getElementById(controlsId)
+      if (!listbox) return
+
+      const setHighlighted = (li, on) => {
+        if (!li) return
+        const targets = [
+          li,
+          li.querySelector('[data-slot="menu-v2-item-content"]'),
+          li.querySelector('[data-slot="menu-v2-item-indicator"]')
+        ]
+        for (const t of targets) {
+          if (!t) continue
+          if (on) t.setAttribute("data-highlighted", "")
+          else t.removeAttribute("data-highlighted")
+        }
+      }
+
+      const setSelected = (li, on) => {
+        if (!li) return
+        li.setAttribute("aria-selected", on ? "true" : "false")
+        const targets = [
+          li,
+          li.querySelector('[data-slot="menu-v2-item-content"]'),
+          li.querySelector('[data-slot="menu-v2-item-indicator"]')
+        ]
+        for (const t of targets) {
+          if (!t) continue
+          if (on) t.setAttribute("data-selected", "")
+          else t.removeAttribute("data-selected")
+        }
+        const ind = li.querySelector('[data-slot="menu-v2-item-indicator"]')
+        if (ind) ind.style.opacity = on ? "1" : "0"
+      }
+
+      let opt = listbox.querySelector('li[data-win95-option="true"]')
+      const isNew = !opt
+
+      if (isNew) {
+        opt = document.createElement("li")
+        opt.setAttribute("role", "option")
+        opt.setAttribute("tabindex", "-1")
+        opt.setAttribute("aria-disabled", "false")
+        opt.setAttribute("data-key", "win95")
+        opt.setAttribute("data-win95-option", "true")
+        opt.setAttribute("data-component", "menu-v2-item")
+        opt.innerHTML =
+          '<span data-slot="menu-v2-item-content">Windows 95</span>' +
+          '<div aria-hidden="true" data-slot="menu-v2-item-indicator">' +
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+          '<path d="M3.53564 8.17857L6.39279 11.75L12.4642 4.25" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path>' +
+          "</svg></div>"
+
+        let activated = false
+        const activateWin95 = (ev) => {
+          if (ev.type === "pointerup" && ev.button !== 0) return
+          ev.preventDefault()
+          ev.stopPropagation()
+          if (activated) return
+          activated = true
+          if (!this.state.enabled) this.toggleWin95Mode(true)
+          const esc = new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          listbox.dispatchEvent(esc)
+          document.dispatchEvent(esc)
+        }
+        opt.addEventListener("pointerdown", (ev) => {
+          ev.preventDefault()
+          ev.stopPropagation()
+        }, true)
+        opt.addEventListener("pointerup", activateWin95, true)
+        opt.addEventListener("click", activateWin95, true)
+        opt.addEventListener("mouseenter", () => {
+          listbox.querySelectorAll('li[role="option"]:not([data-win95-option])').forEach((other) => {
+            setHighlighted(other, false)
+          })
+          setHighlighted(opt, true)
+        })
+        opt.addEventListener("mouseleave", () => setHighlighted(opt, false))
+
+        const firstOption = listbox.querySelector('li[role="option"]')
+        if (firstOption) listbox.insertBefore(opt, firstOption)
+        else listbox.appendChild(opt)
+      }
+
+      if (!listbox.__w95KeyBound) {
+        listbox.__w95KeyBound = true
+        listbox.addEventListener("keydown", (ev) => {
+          if (ev.key !== "Enter" && ev.key !== " ") return
+          const hi = listbox.querySelector('li[role="option"][data-highlighted]')
+          if (!hi) return
+          if (hi.hasAttribute("data-win95-option")) {
+            ev.preventDefault()
+            ev.stopPropagation()
+            if (!this.state.enabled) this.toggleWin95Mode(true)
+            const esc = new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+            listbox.dispatchEvent(esc)
+            document.dispatchEvent(esc)
+          } else if (this.state.enabled) {
+            setTimeout(() => this.toggleWin95Mode(false), 0)
+          }
+        }, true)
+      }
+
+      // Mark native selected options so only Windows 95 shows the checkmark while Win95 is active
+      listbox.querySelectorAll('li[role="option"]:not([data-win95-option])').forEach((li) => {
+        if (this.state.enabled && li.getAttribute("aria-selected") === "true") {
+          li.setAttribute("data-win95-muted-selected", "true")
+        } else {
+          li.removeAttribute("data-win95-muted-selected")
+        }
+        if (!li.__w95SwitchBound) {
+          li.__w95SwitchBound = true
+          li.addEventListener("mouseenter", () => {
+            listbox.__w95UserInteracted = true
+            setHighlighted(opt, false)
+          })
+          const switchOff = (ev) => {
+            if (ev.type === "pointerup" && ev.button !== 0) return
+            if (this.state.enabled) {
+              setTimeout(() => this.toggleWin95Mode(false), 0)
+            }
+          }
+          li.addEventListener("pointerup", switchOff, true)
+          li.addEventListener("click", switchOff, true)
+        }
+      })
+
+      setSelected(opt, this.state.enabled)
+
+      // When opening the theme dropdown while Win95 is active, scroll to top and highlight Windows 95
+      // so it is immediately visible instead of Kobalte scrolling down to the underlying native theme.
+      if (isNew && this.state.enabled) {
+        const viewport = listbox.closest('[data-slot="menu-scroll-viewport"]') || listbox.parentElement
+        if (viewport && !viewport.__w95WheelBound) {
+          viewport.__w95WheelBound = true
+          viewport.addEventListener("wheel", () => { listbox.__w95UserInteracted = true }, { passive: true })
+          viewport.addEventListener("pointerdown", () => { listbox.__w95UserInteracted = true }, { passive: true })
+        }
+        const focusWin95AtTop = () => {
+          if (listbox.__w95UserInteracted || !listbox.isConnected || !this.state.enabled) return
+          if (viewport) viewport.scrollTop = 0
+          listbox.scrollTop = 0
+          listbox.querySelectorAll('li[role="option"]:not([data-win95-option])').forEach((other) => {
+            setHighlighted(other, false)
+          })
+          setHighlighted(opt, true)
+        }
+        focusWin95AtTop()
+        requestAnimationFrame(focusWin95AtTop)
+        setTimeout(focusWin95AtTop, 40)
+        setTimeout(focusWin95AtTop, 110)
+      }
+    }
+
+    const mo = new MutationObserver(() => syncListbox())
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-expanded", "aria-controls"] })
+    document.addEventListener(
+      "click",
+      (e) => {
+        if (e.target && e.target.closest && e.target.closest('[data-action="settings-theme"]')) {
+          setTimeout(syncListbox, 30)
+          setTimeout(syncListbox, 120)
+        }
+      },
+      true
+    )
   }
 
   observeTitle() {

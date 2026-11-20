@@ -52,7 +52,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -BlockAutoUpdate
 
 ## Controls
 
-- `Ctrl+Shift+9` or the top bar / tray toggle button: switch between Win95 and the default OpenCode UI without restarting.
+- `Settings -> Appearance -> Theme` (`Windows 95`), `Ctrl+Shift+9`, or the top bar / tray toggle button: switch between Win95 and any built-in OpenCode theme without restarting.
 - `Ctrl+Esc`: open the Start menu.
 - Right-click desktop or double-click `Display`: change wallpapers, color schemes, sounds, and pixel cursor.
 - `Ctrl+R`: reload the UI after editing files in `%USERPROFILE%\.config\opencode\win95-theme\`.

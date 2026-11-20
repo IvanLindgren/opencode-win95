@@ -172,8 +172,8 @@ html[data-win95="on"][data-color-scheme="dark"] {
   --w95-text: #000000;
   --w95-text-muted: #404040;
   --w95-text-disabled: #808080;
-  --w95-window-bg: #ffffff;
-  --w95-window-alt: #f4f4f0;
+  --w95-window-bg: #f3f2ec;
+  --w95-window-alt: #e6e5de;
   --w95-title-active: #000080;
   --w95-title-active-end: #1084d0;
   --w95-title-active-text: #ffffff;
@@ -184,7 +184,7 @@ html[data-win95="on"][data-color-scheme="dark"] {
   --w95-tooltip-bg: #ffffe1;
   --w95-tooltip-text: #000000;
   --w95-link: #0000ee;
-  --w95-code-bg: #f8f8f4;
+  --w95-code-bg: #ecebe4;
   --w95-term-bg: #000000;
   --w95-term-fg: #c0c0c0;
 
@@ -265,11 +265,11 @@ html[data-win95="on"][data-color-scheme="dark"] {
   --border-strong-base: var(--w95-dark) !important;
   --border-selected: var(--w95-selection-bg) !important;
 
-  /* OpenCode v2 tokens */
-  --v2-background-bg-base: var(--w95-window-bg) !important;
-  --v2-background-bg-deep: var(--w95-face) !important;
-  --v2-background-bg-layer-01: var(--w95-face) !important;
-  --v2-background-bg-layer-02: var(--w95-highlight) !important;
+  /* OpenCode v2 tokens: authentic calm Windows 95 silver (no blinding white margins!) */
+  --v2-background-bg-base: var(--w95-face) !important;
+  --v2-background-bg-deep: #b4b4b4 !important;
+  --v2-background-bg-layer-01: var(--w95-highlight) !important;
+  --v2-background-bg-layer-02: var(--w95-face-alt) !important;
   --v2-background-bg-layer-03: var(--w95-face) !important;
   --v2-background-bg-layer-04: var(--w95-shadow) !important;
   --v2-background-bg-inverse: var(--w95-selection-bg) !important;
@@ -315,34 +315,41 @@ html[data-win95="on"][data-color-scheme="dark"] {
 /* ---------- OPTIONAL CLASSIC WIN95 COLOR SCHEMES ---------- */
 html[data-win95="on"][data-win95-scheme="slate"] {
   --w95-face: #b8c4d0;
+  --w95-face-alt: #c5cfd9;
   --w95-highlight: #d8e2ec;
   --w95-shadow: #6e7d8c;
   --w95-title-active: #1c4a78;
   --w95-title-active-end: #3874a8;
   --w95-selection-bg: #1c4a78;
+  --v2-background-bg-deep: #aab7c4 !important;
 }
 
 html[data-win95="on"][data-win95-scheme="desert"] {
   --w95-face: #d5ccbb;
+  --w95-face-alt: #dfd7c8;
   --w95-highlight: #eae5dc;
   --w95-shadow: #a28d68;
   --w95-title-active: #008080;
   --w95-title-active-end: #18a098;
   --w95-selection-bg: #008080;
+  --v2-background-bg-deep: #c7bda9 !important;
 }
 
 html[data-win95="on"][data-win95-scheme="plum"] {
   --w95-face: #b8a8b8;
+  --w95-face-alt: #c6b8c6;
   --w95-highlight: #d8ccd8;
   --w95-shadow: #786078;
   --w95-title-active: #482858;
   --w95-title-active-end: #784888;
   --w95-selection-bg: #482858;
+  --v2-background-bg-deep: #aa98aa !important;
 }
 
 html[data-win95="on"][data-win95-scheme="hc-dark"] {
   color-scheme: dark !important;
   --w95-face: #242424;
+  --w95-face-alt: #2e2e2e;
   --w95-highlight: #3a3a3a;
   --w95-light: #686868;
   --w95-shadow: #121212;
@@ -357,6 +364,7 @@ html[data-win95="on"][data-win95-scheme="hc-dark"] {
   --w95-selection-text: #ffffff;
   --w95-link: #55ffff;
   --w95-code-bg: #101010;
+  --v2-background-bg-deep: #1a1a1a !important;
   --v2-text-text-faint: #9e9e9e !important;
   --v2-text-text-code-accent: #55ffff !important;
 }
@@ -1019,7 +1027,7 @@ html[data-win95="on"] #win95-main-viewport {
   min-width: 0;
   position: relative;
   overflow: hidden;
-  background: var(--w95-window-bg);
+  background: var(--w95-face);
   box-shadow: var(--w95-bevel-in);
   padding: 2px;
   box-sizing: border-box;
@@ -2102,8 +2110,9 @@ html[data-win95="on"] [data-component="home-session-row"]:focus-visible * {
 html[data-win95="on"] [data-component="card"],
 html[data-win95="on"] [data-component="task-tool-card"],
 html[data-win95="on"] [data-component="attachment-card-v2"],
-html[data-win95="on"] [data-component="settings-v2-list"] {
-  background: var(--w95-face) !important;
+html[data-win95="on"] [data-component="settings-v2-list"],
+html[data-win95="on"] [data-component="settings-list"] {
+  background: var(--w95-face-alt) !important;
   box-shadow: var(--w95-bevel-out) !important;
   border: 0 !important;
 }
@@ -2129,12 +2138,32 @@ html[data-win95="on"] :is([data-component="edit-tool"], [data-component="write-t
   padding-inline: 4px !important;
 }
 
-/* Sticky Session Header Bar: solid opaque Win95 bar instead of bottom fade gradient (prevents text overlap on scroll!) */
+/* Sticky Session Header Bar: solid opaque Win95 silver bar (no white glare, no text overlap!) */
 html[data-win95="on"] #root [class*="bg-[linear-gradient(to_bottom,"] {
   background-image: none !important;
-  background-color: var(--w95-window-bg) !important;
+  background-color: var(--w95-face) !important;
   border-bottom: 1px solid var(--w95-shadow) !important;
+  box-shadow: inset 0 -1px var(--w95-light) !important;
   padding-bottom: 6px !important;
+}
+
+/* Native OpenCode Settings -> Appearance -> Theme dropdown integration */
+html[data-win95="on"] [data-action="settings-theme"] [data-slot="select-v2-value-text"] {
+  display: none !important;
+}
+
+html[data-win95="on"] [data-action="settings-theme"] [data-slot="select-v2-value"]::after {
+  content: "Windows 95";
+  color: var(--w95-text);
+  font-weight: 400;
+}
+
+html[data-win95="on"] li[data-win95-muted-selected="true"] [data-slot="menu-v2-item-indicator"] {
+  opacity: 0 !important;
+}
+
+li[data-win95-option="true"] {
+  cursor: pointer;
 }
 
 /* Disable decorative scroll-fade edge masks only (never make sticky headers transparent!) */
