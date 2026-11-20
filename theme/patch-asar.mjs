@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import crypto from "node:crypto"
 import os from "node:os"
+import { spawnSync } from "node:child_process"
 
 const DEFAULT_ASAR = path.join(
   os.homedir(),
@@ -55,13 +56,28 @@ function readEntryText(asar, relPath) {
   return buf.toString("utf8")
 }
 
+function resolveMainPath(asar) {
+  try {
+    const pkg = JSON.parse(readEntryText(asar, "package.json") || "{}")
+    if (pkg.main) return pkg.main.replace(/^\.\//, "")
+  } catch {}
+  return "out/main/index.js"
+}
+
+function resolvePreloadPath(asar) {
+  for (const candidate of ["out/preload/index.cjs", "out/preload/index.js", "out/preload/index.mjs"]) {
+    if (getEntry(asar.header, candidate)) return candidate
+  }
+  return null
+}
+
 function isAsarPatched(filePath) {
   let asar
   try {
     asar = openAsar(filePath)
     const html = readEntryText(asar, "out/renderer/index.html") || ""
-    const main = readEntryText(asar, "out/main/index.js") || ""
-    return html.includes("./win95/win95.js") && main.includes("win95-trigger-command")
+    const main = readEntryText(asar, resolveMainPath(asar)) || ""
+    return html.includes("win95://theme/win95.js") && main.includes("__OPENCODE_WIN95_MAIN_HOOK__")
   } catch {
     return false
   } finally {
@@ -82,12 +98,12 @@ function readVersion(filePath) {
   }
 }
 
-// Fast 15ms status check mode for guard/launcher
+// Fast ~50ms check mode used by guard & launcher
 if (checkOnly) {
   process.exit(isAsarPatched(asarPath) ? 0 : 2)
 }
 
-// Always refresh backup when live app.asar is unpatched (e.g., right after an OpenCode update!)
+// Refresh backup whenever live app.asar is unpatched or updated to a newer version
 const livePatched = isAsarPatched(asarPath)
 const liveVer = readVersion(asarPath)
 if (!livePatched || !fs.existsSync(backupPath)) {
@@ -104,6 +120,13 @@ if (!livePatched || !fs.existsSync(backupPath)) {
 }
 
 const src = openAsar(backupPath)
+const mainRelPath = resolveMainPath(src)
+const preloadRelPath = resolvePreloadPath(src)
+const htmlRelPath = "out/renderer/index.html"
+
+if (!preloadRelPath) {
+  throw new Error("Could not find preload entry in out/preload/")
+}
 
 function computeIntegrity(buf) {
   const blockSize = 4194304
@@ -119,266 +142,231 @@ function computeIntegrity(buf) {
   return { algorithm: "SHA256", hash, blockSize, blocks }
 }
 
-function replaceMatch(source, pattern, replacement, label, optional = false) {
-  if (typeof pattern === "string") {
-    const idx = source.indexOf(pattern)
-    if (idx === -1) {
-      if (optional) {
-        console.warn(`WARN: Optional anchor skipped [${label}]`)
-        return source
-      }
-      throw new Error(`Patch anchor not found [${label}]`)
-    }
-    return source.slice(0, idx) + replacement + source.slice(idx + pattern.length)
-  }
-  const m = source.match(pattern)
-  if (!m) {
-    if (optional) {
-      console.warn(`WARN: Optional regex anchor skipped [${label}]`)
-      return source
-    }
-    throw new Error(`Patch regex anchor not found [${label}]`)
-  }
-  return source.replace(pattern, replacement)
-}
+// ============================================================================
+// 1. Version-agnostic main process hook (uses ONLY official Electron APIs!)
+//    Works on OpenCode 1.x, 2.x, 2.3.2, and future releases regardless of bundler.
+// ============================================================================
+const MAIN_HOOK = `/* __OPENCODE_WIN95_MAIN_HOOK__ */
+import { app as __w95App, BrowserWindow as __w95BW, ipcMain as __w95Ipc, net as __w95Net, protocol as __w95Proto } from "electron";
+import * as __w95Fs from "node:fs";
+import * as __w95Path from "node:path";
+import * as __w95Os from "node:os";
+import { pathToFileURL as __w95ToUrl } from "node:url";
 
-// 1. Patch out/main/index.js
-let mainJs = readEntryText(src, "out/main/index.js")
-if (!mainJs) throw new Error("out/main/index.js not found in app.asar")
-
-// 1a. Serve /win95/* live from ~/.config/opencode/win95-theme
-mainJs = replaceMatch(
-  mainJs,
-  /const file = resolve\(rendererRoot, `\.\$\{decodeURIComponent\(url\.pathname\)\}`\);/,
-  `if (url.pathname.startsWith("/win95/")) {
-      const w95Root = join(homedir(), ".config", "opencode", "win95-theme");
-      const w95File = resolve(w95Root, \`.\${decodeURIComponent(url.pathname.slice("/win95".length))}\`);
-      const w95Rel = relative(w95Root, w95File);
-      if (w95Rel.startsWith("..") || isAbsolute(w95Rel) || !existsSync(w95File)) {
-        return new Response("Not found", { status: 404 });
-      }
-      try {
-        const w95Resp = await net.fetch(pathToFileURL(w95File).toString());
-        const w95Hdrs = new Headers(w95Resp.headers);
-        w95Hdrs.set("Cache-Control", "no-store");
-        return new Response(w95Resp.body, { status: w95Resp.status, statusText: w95Resp.statusText, headers: w95Hdrs });
-      } catch {
-        return new Response("Not found", { status: 404 });
-      }
-    }
-    $&`,
-  "main/registerRendererProtocol"
-)
-
-// 1b. Remove native Windows 11 titleBarOverlay so Win95 chrome isn't overlaid by Win11 buttons
-mainJs = replaceMatch(
-  mainJs,
-  /\.\.\.process\.platform === "win32" \? \{\s*frame: false,\s*titleBarStyle: "hidden",\s*titleBarOverlay: overlay\(\{ mode \}\)\s*\} : \{\},/,
-  `...process.platform === "win32" ? {
-      frame: false,
-      titleBarStyle: "hidden"
-    } : {},`,
-  "main/createMainWindow-win32"
-)
-
-// 1c. Use teal startup background when Win95 is enabled
-mainJs = replaceMatch(
-  mainJs,
-  /backgroundColor: backgroundColor \?\? defaultBackgroundColor\(\),/,
-  `backgroundColor: (() => {
-      try {
-        const p = join(homedir(), ".config", "opencode", "win95-theme", "state.json");
-        if (existsSync(p)) {
-          const st = JSON.parse(readFileSync(p, "utf8"));
-          if (st.enabled !== false) return "#008080";
-        } else {
-          return "#008080";
-        }
-      } catch {}
-      return backgroundColor ?? defaultBackgroundColor();
-    })(),`,
-  "main/backgroundColor",
-  true
-)
-
-// 1d. Forward maximize/unmaximize state to renderer
-mainJs = replaceMatch(
-  mainJs,
-  /  wireZoom\(win\);/,
-  `  wireZoom(win);
-  win.on("maximize", () => { try { win.webContents.send("win95-maximized"); } catch {} });
-  win.on("unmaximize", () => { try { win.webContents.send("win95-unmaximized"); } catch {} });`,
-  "main/wireZoom",
-  true
-)
-
-// 1e. Guard setTitleBarOverlay so it never throws when titleBarOverlay is omitted
-mainJs = replaceMatch(
-  mainJs,
-  /function updateTitlebar\(win\) \{\s*if \(process\.platform !== "win32"\) return;\s*win\.setTitleBarOverlay\(overlay\(titlebarThemes\.get\(win\), win\.webContents\.getZoomFactor\(\)\)\);\s*\}/,
-  `function updateTitlebar(win) {
-  if (process.platform !== "win32") return;
-  try {
-    win.setTitleBarOverlay(overlay(titlebarThemes.get(win), win.webContents.getZoomFactor()));
-  } catch {}
-}`,
-  "main/updateTitlebar"
-)
-
-// 1f. Register Win95 IPC handlers
-mainJs = replaceMatch(
-  mainJs,
-  /ipcMain\.handle\("run-desktop-menu-action",[\s\S]*?\}\);/,
-  `$&
-  ipcMain.handle("win95-trigger-command", (event, id) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && typeof id === "string") sendMenuCommand(win, id);
-  });
-  ipcMain.handle("win95-is-maximized", (event) => {
-    return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false;
-  });
-  ipcMain.handle("win95-get-state", () => {
+;(function __initOpenCodeWin95Main() {
+  const w95Dir = () => __w95Path.join(__w95Os.homedir(), ".config", "opencode", "win95-theme");
+  const w95ReadState = () => {
     try {
-      const p = join(homedir(), ".config", "opencode", "win95-theme", "state.json");
-      if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8"));
+      const p = __w95Path.join(w95Dir(), "state.json");
+      if (__w95Fs.existsSync(p)) return JSON.parse(__w95Fs.readFileSync(p, "utf8"));
     } catch {}
-    return null;
-  });
-  ipcMain.handle("win95-set-state", (_event, next) => {
+    return { enabled: true };
+  };
+
+  try {
+    const w95Scheme = {
+      scheme: "win95",
+      privileges: {
+        secure: true,
+        standard: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true
+      }
+    };
+    const origReg = __w95Proto.registerSchemesAsPrivileged.bind(__w95Proto);
+    __w95Proto.registerSchemesAsPrivileged = (list) => {
+      const arr = Array.isArray(list) ? list.slice() : [];
+      if (!arr.some((s) => s && s.scheme === "win95")) arr.push(w95Scheme);
+      return origReg(arr);
+    };
+  } catch {}
+
+  __w95App.whenReady().then(() => {
     try {
-      const dir = join(homedir(), ".config", "opencode", "win95-theme");
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, "state.json"), JSON.stringify(next, null, 2), "utf8");
+      if (!__w95Proto.isProtocolHandled("win95")) {
+        __w95Proto.handle("win95", async (request) => {
+          const url = new URL(request.url);
+          if (url.host !== "theme") return new Response("Not found", { status: 404 });
+          const root = w95Dir();
+          const file = __w95Path.resolve(root, "." + decodeURIComponent(url.pathname));
+          const rel = __w95Path.relative(root, file);
+          if (rel.startsWith("..") || __w95Path.isAbsolute(rel) || !__w95Fs.existsSync(file)) {
+            return new Response("Not found", { status: 404 });
+          }
+          try {
+            const resp = await __w95Net.fetch(__w95ToUrl(file).toString());
+            const hdrs = new Headers(resp.headers);
+            hdrs.set("Cache-Control", "no-store");
+            hdrs.set("Access-Control-Allow-Origin", "*");
+            return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: hdrs });
+          } catch {
+            return new Response("Not found", { status: 404 });
+          }
+        });
+      }
+    } catch {}
+  });
+
+  __w95App.on("browser-window-created", (_event, win) => {
+    try {
+      if (process.platform === "win32") {
+        // Prevent any OpenCode chunk from throwing when native titleBarOverlay is stripped
+        win.setTitleBarOverlay = () => {};
+      }
+      const st = w95ReadState();
+      if (st && st.enabled !== false) {
+        try { win.setBackgroundColor("#008080"); } catch {}
+      }
+      win.on("maximize", () => { try { win.webContents.send("win95-maximized"); } catch {} });
+      win.on("unmaximize", () => { try { win.webContents.send("win95-unmaximized"); } catch {} });
+    } catch {}
+  });
+
+  __w95Ipc.handle("win95-trigger-command", (event, id) => {
+    const win = __w95BW.fromWebContents(event.sender);
+    if (win && typeof id === "string") {
+      try { win.webContents.send("menu-command", id); } catch {}
+    }
+  });
+
+  __w95Ipc.handle("win95-host-action", (event, action) => {
+    const win = __w95BW.fromWebContents(event.sender);
+    if (!win) return;
+    switch (action) {
+      case "window.minimize": win.minimize(); break;
+      case "window.toggleMaximize": win.isMaximized() ? win.unmaximize() : win.maximize(); break;
+      case "window.close": win.close(); break;
+      case "app.relaunch": __w95App.relaunch(); __w95App.exit(0); break;
+      case "view.reload": win.reload(); break;
+      case "view.toggleDevTools": win.webContents.toggleDevTools(); break;
+      case "view.resetZoom": win.webContents.setZoomFactor(1); break;
+      case "view.zoomIn": win.webContents.setZoomFactor(Math.min(3, (win.webContents.getZoomFactor() || 1) + 0.15)); break;
+      case "view.zoomOut": win.webContents.setZoomFactor(Math.max(0.5, (win.webContents.getZoomFactor() || 1) - 0.15)); break;
+      case "view.toggleFullscreen": win.setFullScreen(!win.isFullScreen()); break;
+      case "edit.undo": win.webContents.undo(); break;
+      case "edit.redo": win.webContents.redo(); break;
+      case "edit.cut": win.webContents.cut(); break;
+      case "edit.copy": win.webContents.copy(); break;
+      case "edit.paste": win.webContents.paste(); break;
+      case "edit.delete": win.webContents.delete(); break;
+      case "edit.selectAll": win.webContents.selectAll(); break;
+    }
+  });
+
+  __w95Ipc.handle("win95-is-maximized", (event) => {
+    return __w95BW.fromWebContents(event.sender)?.isMaximized() ?? false;
+  });
+
+  __w95Ipc.handle("win95-get-state", () => w95ReadState());
+
+  __w95Ipc.handle("win95-set-state", (_event, next) => {
+    try {
+      const dir = w95Dir();
+      __w95Fs.mkdirSync(dir, { recursive: true });
+      __w95Fs.writeFileSync(__w95Path.join(dir, "state.json"), JSON.stringify(next, null, 2), "utf8");
     } catch {}
     return next;
   });
-  ipcMain.handle("win95-get-system-info", () => ({
-    version: app.getVersion(),
+
+  __w95Ipc.handle("win95-get-system-info", () => ({
+    version: __w95App.getVersion(),
     electron: process.versions.electron,
     node: process.versions.node,
     arch: process.arch,
-    user: (() => { try { return userInfo().username; } catch { return "User"; } })(),
+    user: (() => { try { return __w95Os.userInfo().username; } catch { return "User"; } })(),
     platform: process.platform
-  }));`,
-  "main/ipc-win95"
-)
+  }));
+})();
+`
 
-// 2. Patch out/preload/index.js
-let preloadJs = readEntryText(src, "out/preload/index.js")
-if (!preloadJs) throw new Error("out/preload/index.js not found in app.asar")
+let mainJs = readEntryText(src, mainRelPath)
+if (!mainJs) throw new Error(`${mainRelPath} not found in app.asar`)
 
-preloadJs = replaceMatch(
-  preloadJs,
-  /\n\};\s*\nelectron\.contextBridge\.exposeInMainWorld\("api", api\);/,
-  `,
-  win95: {
-    triggerCommand: (id) => electron.ipcRenderer.invoke("win95-trigger-command", id),
-    isMaximized: () => electron.ipcRenderer.invoke("win95-is-maximized"),
-    getState: () => electron.ipcRenderer.invoke("win95-get-state"),
-    setState: (state) => electron.ipcRenderer.invoke("win95-set-state", state),
-    getSystemInfo: () => electron.ipcRenderer.invoke("win95-get-system-info"),
-    onMaximizedChange: (cb) => {
-      const onMax = () => cb(true);
-      const onUnmax = () => cb(false);
-      electron.ipcRenderer.on("win95-maximized", onMax);
-      electron.ipcRenderer.on("win95-unmaximized", onUnmax);
-      return () => {
-        electron.ipcRenderer.removeListener("win95-maximized", onMax);
-        electron.ipcRenderer.removeListener("win95-unmaximized", onUnmax);
-      };
-    }
+// Safely disable native Win11 titleBarOverlay in both v1.x (object literal) and v2.x (assignment)
+mainJs = mainJs
+  .replace(/(\btitleBarOverlay\s*:\s*)(?:[\w$.]+\([^()]*\)|\{[^{}]*\})/g, "$1false")
+  .replace(/(\btitleBarOverlay\s*=\s*)(?:[\w$.]+\([^()]*\)|\{[^{}]*\})/g, "$1!1")
+
+mainJs = MAIN_HOOK + "\n" + mainJs
+
+// Syntax-validate patched mainJs before ever touching app.asar
+const syntaxTmp = path.join(os.tmpdir(), `opencode-win95-syntax-${process.pid}.mjs`)
+try {
+  fs.writeFileSync(syntaxTmp, mainJs, "utf8")
+  const chk = spawnSync(process.execPath, ["--check", syntaxTmp], { encoding: "utf8" })
+  if (chk.status !== 0) {
+    throw new Error(`Patched mainJs failed syntax check:\n${chk.stderr || chk.stdout}`)
   }
-};
-electron.contextBridge.exposeInMainWorld("api", api);`,
-  "preload/api"
+} finally {
+  try { fs.unlinkSync(syntaxTmp) } catch {}
+}
+
+// ============================================================================
+// 2. Version-agnostic preload append (zero anchors, works on .cjs and .js!)
+// ============================================================================
+let preloadJs = readEntryText(src, preloadRelPath)
+if (!preloadJs) throw new Error(`${preloadRelPath} not found in app.asar`)
+
+const PRELOAD_APPEND = `
+;/* __OPENCODE_WIN95_PRELOAD_HOOK__ */
+(function(){
+  try {
+    const __el = require("electron");
+    __el.contextBridge.exposeInMainWorld("win95Api", {
+      triggerCommand: (id) => __el.ipcRenderer.invoke("win95-trigger-command", id),
+      runHostAction: (action) => __el.ipcRenderer.invoke("win95-host-action", action),
+      isMaximized: () => __el.ipcRenderer.invoke("win95-is-maximized"),
+      getState: () => __el.ipcRenderer.invoke("win95-get-state"),
+      setState: (state) => __el.ipcRenderer.invoke("win95-set-state", state),
+      getSystemInfo: () => __el.ipcRenderer.invoke("win95-get-system-info"),
+      onMaximizedChange: (cb) => {
+        const onMax = () => cb(true);
+        const onUnmax = () => cb(false);
+        __el.ipcRenderer.on("win95-maximized", onMax);
+        __el.ipcRenderer.on("win95-unmaximized", onUnmax);
+        return () => {
+          __el.ipcRenderer.removeListener("win95-maximized", onMax);
+          __el.ipcRenderer.removeListener("win95-unmaximized", onUnmax);
+        };
+      }
+    });
+  } catch {}
+})();
+`
+preloadJs = preloadJs + PRELOAD_APPEND
+
+// ============================================================================
+// 3. Renderer index.html injection via win95://theme/ protocol
+// ============================================================================
+let indexHtml = readEntryText(src, htmlRelPath)
+if (!indexHtml) throw new Error(`${htmlRelPath} not found in app.asar`)
+
+if (!indexHtml.includes("</head>") || !indexHtml.includes("</body>")) {
+  throw new Error("Unexpected index.html structure")
+}
+
+indexHtml = indexHtml.replace(
+  "</head>",
+  `    <link id="win95-theme-css" rel="stylesheet" href="win95://theme/win95.css" />
+    <script src="win95://theme/win95-boot.js"></script>
+  </head>`
+)
+indexHtml = indexHtml.replace(
+  "</body>",
+  `    <script type="module" src="win95://theme/win95.js"></script>
+  </body>`
 )
 
-// 3. Patch out/renderer/index.html
-let indexHtml = readEntryText(src, "out/renderer/index.html")
-if (!indexHtml) throw new Error("out/renderer/index.html not found in app.asar")
-
-indexHtml = replaceMatch(
-  indexHtml,
-  `</head>`,
-  `    <link id="win95-theme-css" rel="stylesheet" href="./win95/win95.css" />
-    <script src="./win95/win95-boot.js"></script>
-  </head>`,
-  "renderer/index.html-head"
-)
-indexHtml = replaceMatch(
-  indexHtml,
-  `</body>`,
-  `    <script type="module" src="./win95/win95.js"></script>
-  </body>`,
-  "renderer/index.html-body"
-)
-
-// 4. Route OpenCode's notification audio through the Win95 sound scheme (resilient to minified variable renames)
+// ============================================================================
+// 4. Write patched ASAR atomically
+// ============================================================================
 const replacements = [
-  { relPath: "out/main/index.js", buf: Buffer.from(mainJs, "utf8") },
-  { relPath: "out/preload/index.js", buf: Buffer.from(preloadJs, "utf8") },
-  { relPath: "out/renderer/index.html", buf: Buffer.from(indexHtml, "utf8") }
+  { relPath: mainRelPath, buf: Buffer.from(mainJs, "utf8") },
+  { relPath: preloadRelPath, buf: Buffer.from(preloadJs, "utf8") },
+  { relPath: htmlRelPath, buf: Buffer.from(indexHtml, "utf8") }
 ]
 
-const rendererScript = indexHtml.match(/\bsrc="\.\/(assets\/main-[\w-]+\.js)"/)
-if (rendererScript) {
-  const rendererPath = `out/renderer/${rendererScript[1]}`
-  let rendererJs = readEntryText(src, rendererPath)
-  if (rendererJs) {
-    const origRenderer = rendererJs
-    rendererJs = replaceMatch(
-      rendererJs,
-      /function playSoundById\((\w+)\) \{\s*return soundSrc\(\1\)\.then\(\(src\) => playSound\(src\)\);\s*\}/,
-      `function win95NotificationMode() {
-  return document.documentElement.dataset.win95 === "on";
-}
-async function playSoundById($1, event) {
-  if (!win95NotificationMode()) return soundSrc($1).then((src) => playSound(src));
-  if (document.documentElement.dataset.win95Sounds === "off" || !$1 || $1 === "none") return;
-  const cue = event === "complete" ? "chimes"
-    : event === "prompt" ? "ding"
-    : event === "error" ? "chord"
-    : $1 === "staplebops-02" || /^(alert|bip-bop)-/.test($1) ? "ding"
-    : $1.startsWith("nope-") ? "chord" : "chimes";
-  return playSound("/win95/sounds/" + cue + ".wav");
-}`,
-      "renderer/Win95 sound playback",
-      true
-    )
-    for (const [setting, event] of Object.entries({ agent: "complete", permissions: "prompt", errors: "error" })) {
-      rendererJs = replaceMatch(
-        rendererJs,
-        `playSoundById(settings.sounds.${setting}())`,
-        `playSoundById(settings.sounds.${setting}(), "${event}")`,
-        `renderer/${setting} sound`,
-        true
-      )
-    }
-    rendererJs = replaceMatch(
-      rendererJs,
-      /(if \(\w+\.details\.type === "question\.asked"\) \{\s*)(if \(settings\.notifications\.agent\(\)\))/,
-      `$1if (win95NotificationMode() && settings.sounds.permissionsEnabled()) {
-          void playSoundById(settings.sounds.permissions(), "prompt");
-        }
-        $2`,
-      "renderer/question sound",
-      true
-    )
-    rendererJs = replaceMatch(
-      rendererJs,
-      /(const notification = new Notification\(title, \{\s*)(body: description \?\? "",)/,
-      `$1...(win95NotificationMode() ? { silent: true } : {}),
-        $2`,
-      "renderer/silent Windows toast in Win95 mode",
-      true
-    )
-    if (rendererJs !== origRenderer) {
-      replacements.push({ relPath: rendererPath, buf: Buffer.from(rendererJs, "utf8") })
-    }
-  }
-}
-
-// 5. Append patched file buffers cleanly & update header entries
 let nextOffset = src.payloadSize
 for (const item of replacements) {
   const entry = getEntry(src.header, item.relPath)
@@ -428,4 +416,4 @@ fs.closeSync(src.fd)
 fs.closeSync(outFd)
 
 fs.renameSync(tmpPath, asarPath)
-console.log(`SUCCESS: OpenCode Desktop v${liveVer} patched cleanly (${replacements.length} files hooked).`)
+console.log(`SUCCESS: OpenCode Desktop v${liveVer} patched cleanly (universal hook: ${mainRelPath}, ${preloadRelPath}, ${htmlRelPath}).`)

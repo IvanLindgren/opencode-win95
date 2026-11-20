@@ -94,7 +94,7 @@ if ($needsPatch) {
   }
 
   $ok = $false
-  for ($attempt = 1; $attempt -le 5; $attempt++) {
+  for ($attempt = 1; $attempt -le 4; $attempt++) {
     try {
       $out = & node $patcher $AsarPath 2>&1 | Out-String
       if ($LASTEXITCODE -eq 0) {
@@ -114,7 +114,11 @@ if ($needsPatch) {
   }
 
   if (($Launch -or ($RelaunchIfRunning -and $wasRunning)) -and (Test-Path $exePath)) {
-    Write-GuardLog "Launching patched OpenCode Desktop..."
+    if ($ok) {
+      Write-GuardLog "Launching patched OpenCode Desktop..."
+    } else {
+      Write-GuardLog "Patch failed; launching OpenCode Desktop unpatched..."
+    }
     Start-Process -FilePath $exePath
   }
   if (-not $ok) { exit 1 }

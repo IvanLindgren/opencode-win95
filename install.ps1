@@ -24,7 +24,7 @@ $savedState = if ($hadState) { Get-Content -Path $stateDst -Raw } else { $null }
 
 # Stop any previous guard process before overwriting scripts
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -like '*win95-guard.ps1*' } |
+  Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -like '*win95-guard.ps1*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 New-Item -ItemType Directory -Force -Path $themeDst | Out-Null

@@ -14,6 +14,8 @@ if (-not $createdNew) {
   exit 0
 }
 
+$script:lastFailedStamp = ""
+
 function Write-Log([string]$msg) {
   try {
     if ((Test-Path $logFile) -and (Get-Item $logFile).Length -gt 131072) {
@@ -23,15 +25,33 @@ function Write-Log([string]$msg) {
   } catch {}
 }
 
+function Get-FileStamp([string]$p) {
+  try {
+    $fi = Get-Item $p -ErrorAction Stop
+    return "$($fi.Length):$($fi.LastWriteTimeUtc.Ticks)"
+  } catch {
+    return ""
+  }
+}
+
 function Invoke-Heal([string]$reason) {
   try {
     $patcher = Join-Path $themeDir "patch-asar.mjs"
     if (-not (Test-Path $AsarPath) -or -not (Test-Path $patcher)) { return }
+    $stamp = Get-FileStamp $AsarPath
+    if ($stamp -and $stamp -eq $script:lastFailedStamp) { return }
+
     & node $patcher --check $AsarPath 2>$null
     if ($LASTEXITCODE -ne 0) {
       Write-Log "Trigger ($reason): app.asar is unpatched, waiting for installer to settle..."
       Start-Sleep -Seconds 2
       & powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $ensureScript -AsarPath $AsarPath -RelaunchIfRunning -RepairShortcuts
+      if ($LASTEXITCODE -ne 0) {
+        $script:lastFailedStamp = Get-FileStamp $AsarPath
+        Write-Log "Auto-patch failed for stamp $($script:lastFailedStamp); pausing retries until next update."
+      } else {
+        $script:lastFailedStamp = ""
+      }
     }
   } catch {
     Write-Log "Heal error: $_"
@@ -39,12 +59,9 @@ function Invoke-Heal([string]$reason) {
 }
 
 Write-Log "Win95 update guard started (PID $PID), watching $AsarPath"
-
-# Initial check on startup
 Invoke-Heal "startup"
 
 $resDir = Split-Path $AsarPath -Parent
-$programsDir = Join-Path $env:LOCALAPPDATA "Programs"
 $watcher = $null
 
 function Ensure-Watcher {
@@ -67,13 +84,11 @@ try {
   while ($true) {
     Ensure-Watcher
     if ($watcher) {
-      # Blocks at 0% CPU until app.asar changes or 20s heartbeat elapses
       $res = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::All, 20000)
       if (-not $res.TimedOut) {
         Start-Sleep -Milliseconds 1200
         Invoke-Heal "fs-$($res.ChangeType)"
       } else {
-        # Periodic lightweight check in case NSIS recreated the whole folder
         Invoke-Heal "heartbeat"
       }
     } else {

@@ -80,6 +80,10 @@ class OpenCode95Desktop {
     this.syncDisplayUI = null
   }
 
+  getBridge() {
+    return window.win95Api || window.api?.win95
+  }
+
   async init() {
     this.loadLocalState()
     this.applyCursors()
@@ -87,21 +91,22 @@ class OpenCode95Desktop {
 
     // Sync with persisted Electron file state & system info
     try {
-      if (window.api?.win95?.getState) {
-        const diskState = await window.api.win95.getState()
+      const bridge = this.getBridge()
+      if (bridge?.getState) {
+        const diskState = await bridge.getState()
         if (diskState && typeof diskState === "object") {
           this.state = { ...DEFAULT_STATE, ...diskState }
           this.saveLocalState()
           this.applyStateToDom()
         }
       }
-      if (window.api?.win95?.getSystemInfo) {
-        this.sysInfo = await window.api.win95.getSystemInfo()
+      if (bridge?.getSystemInfo) {
+        this.sysInfo = await bridge.getSystemInfo()
       }
-      if (window.api?.win95?.isMaximized) {
-        this.hostMaximized = await window.api.win95.isMaximized()
+      if (bridge?.isMaximized) {
+        this.hostMaximized = await bridge.isMaximized()
       }
-      window.api?.win95?.onMaximizedChange?.((max) => {
+      bridge?.onMaximizedChange?.((max) => {
         this.hostMaximized = max
         this.updateHostMaxIcon()
       })
@@ -179,7 +184,7 @@ class OpenCode95Desktop {
     sounds.setEnabled(this.state.enabled && this.state.sounds)
     if (typeof this.syncDisplayUI === "function") this.syncDisplayUI()
     try {
-      window.api?.win95?.setState?.(this.state)
+      this.getBridge()?.setState?.(this.state)
     } catch {
       // ignore
     }
@@ -222,7 +227,10 @@ class OpenCode95Desktop {
     this.closeAllMenus()
     this.restoreAndFocusMain()
     try {
-      window.api?.win95?.triggerCommand?.(cmd)
+      const handledV2 = typeof window.__WIN95_TRIGGER_V2_CMD__ === "function" && window.__WIN95_TRIGGER_V2_CMD__(cmd)
+      if (!handledV2) {
+        this.getBridge()?.triggerCommand?.(cmd)
+      }
     } catch {
       // ignore
     }
@@ -231,7 +239,12 @@ class OpenCode95Desktop {
   runHostAction(action) {
     this.closeAllMenus()
     try {
-      window.api?.runDesktopMenuAction?.(action)
+      const bridge = this.getBridge()
+      if (bridge?.runHostAction) {
+        bridge.runHostAction(action)
+      } else {
+        window.api?.runDesktopMenuAction?.(action)
+      }
     } catch {
       // ignore
     }

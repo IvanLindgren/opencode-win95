@@ -12,7 +12,7 @@ if (Test-Path $startupVbs) {
   Remove-Item -Path $startupVbs -Force -ErrorAction SilentlyContinue
 }
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -like '*win95-guard.ps1*' } |
+  Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -like '*win95-guard.ps1*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 # 2. Restore original OpenCode shortcuts
