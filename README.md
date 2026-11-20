@@ -1,27 +1,27 @@
 # opencode-win95
 
-Тема и оболочка рабочего стола Windows 95 для OpenCode Desktop (Windows, Electron).
+Windows 95 desktop theme and shell for OpenCode Desktop (Windows, Electron).
 
-Внутри: рабочий стол с ярлыками, окно OpenCode в рамке Win95, панель задач, меню Start, выбор обоев и цветовых схем (Display Properties), системные звуки Windows 95, пиксельные шрифты (MS Sans Serif с кириллицей и Fixedsys Excelsior) и быстрое переключение обратно на обычный интерфейс.
+Includes a Windows 95 desktop with icons, framed draggable OpenCode window, taskbar, Start menu, wallpaper and color scheme switcher (Display Properties), Windows 95 WAV sounds, pixel fonts (MS Sans Serif with Cyrillic + Fixedsys Excelsior), and a quick toggle back to the default OpenCode UI.
 
-## Скриншоты
+## Screenshots
 
-![Рабочий стол и окно Welcome](screenshots/desktop-welcome.png)
+![Desktop and Welcome dialog](screenshots/desktop-welcome.png)
 
-![Меню Start](screenshots/start-menu.png)
+![Start menu](screenshots/start-menu.png)
 
-![Смена обоев и System Properties](screenshots/display-and-system.png)
+![Wallpapers and System Properties](screenshots/display-and-system.png)
 
-![Окно сессии](screenshots/session.png)
+![Session view](screenshots/session.png)
 
-![Выбор модели](screenshots/models-dialog.png)
+![Model picker dialog](screenshots/models-dialog.png)
 
-## Требования
+## Requirements
 
-- Windows + установленный OpenCode Desktop
+- Windows with OpenCode Desktop installed
 - Node.js 18+
 
-## Установка
+## Install
 
 ```powershell
 git clone https://github.com/IvanLindgren/opencode-win95.git
@@ -29,39 +29,39 @@ cd opencode-win95
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Скрипт сам:
-1. Скопирует файлы темы, шрифты и звуки в `%USERPROFILE%\.config\opencode\win95-theme\`.
-2. Сделает бэкап оригинального `app.asar` рядом в `app.asar.bak`.
-3. Добавит хук загрузки темы в `app.asar`.
+What `install.ps1` does:
+1. Copies the theme files, fonts, and sounds to `%USERPROFILE%\.config\opencode\win95-theme\`.
+2. Backs up the original `app.asar` to `app.asar.bak`.
+3. Patches `app.asar` to load the local theme folder.
 
-После этого просто запусти OpenCode Desktop.
+Start OpenCode Desktop normally after that.
 
-Если OpenCode установлен в нестандартную папку, передай путь вручную:
+If OpenCode is installed in a custom path:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -AsarPath "D:\path\to\resources\app.asar"
 ```
 
-## Управление
+## Controls
 
-- `Ctrl+Shift+9` или кнопка в верхней панели / трее: переключить между Win95 и обычным интерфейсом OpenCode без перезапуска.
-- `Ctrl+Esc`: открыть меню Start.
-- ПКМ по рабочему столу или двойной клик по ярлыку `Display`: сменить обои, цветовую схему, звуки и курсор.
-- `Ctrl+R`: перезагрузить интерфейс, если правил файлы в `%USERPROFILE%\.config\opencode\win95-theme\`.
+- `Ctrl+Shift+9` or the top bar / tray toggle button: switch between Win95 and the default OpenCode UI without restarting.
+- `Ctrl+Esc`: open the Start menu.
+- Right-click desktop or double-click `Display`: change wallpapers, color schemes, sounds, and pixel cursor.
+- `Ctrl+R`: reload the UI after editing files in `%USERPROFILE%\.config\opencode\win95-theme\`.
 
-## После обновления OpenCode
+## After OpenCode Updates
 
-Если OpenCode Desktop обновился и перезаписал `app.asar`, снова запусти `.\install.ps1` (или `%USERPROFILE%\.config\opencode\win95-theme\repatch.ps1`).
+If an OpenCode Desktop update overwrites `app.asar`, run `.\install.ps1` again (or `%USERPROFILE%\.config\opencode\win95-theme\repatch.ps1`).
 
-## Удаление и откат
+## Uninstall
 
-Вернуть оригинальный `app.asar` из бэкапа:
+Restore the original `app.asar` from backup:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ```
 
-Вернуть оригинал и удалить папку темы:
+Restore `app.asar` and delete the theme folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\uninstall.ps1 -RemoveFiles
