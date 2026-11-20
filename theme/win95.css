@@ -2129,17 +2129,24 @@ html[data-win95="on"] :is([data-component="edit-tool"], [data-component="write-t
   padding-inline: 4px !important;
 }
 
-/* Disable modern smooth scroll-fade gradients that wash out crisp Win95 borders */
-html[data-win95="on"] #root [class*="bg-[linear-gradient(to_bottom,"],
-html[data-win95="on"] #root [class*="bg-[linear-gradient(to_top,"],
-html[data-win95="on"] #root [class*="bg-[linear-gradient(to_left,"],
-html[data-win95="on"] #root [class*="bg-[linear-gradient(to_right,"],
+/* Sticky Session Header Bar: solid opaque Win95 bar instead of bottom fade gradient (prevents text overlap on scroll!) */
+html[data-win95="on"] #root [class*="bg-[linear-gradient(to_bottom,"] {
+  background-image: none !important;
+  background-color: var(--w95-window-bg) !important;
+  border-bottom: 1px solid var(--w95-shadow) !important;
+  padding-bottom: 6px !important;
+}
+
+/* Disable decorative scroll-fade edge masks only (never make sticky headers transparent!) */
+html[data-win95="on"] #root [data-slot="titlebar-tabs-fade-left"],
+html[data-win95="on"] #root [data-slot="titlebar-tabs-fade-right"],
+html[data-win95="on"] #root [data-slot="prompt-attachments-fade-left"],
+html[data-win95="on"] #root [data-slot="prompt-attachments-fade-right"],
 html[data-win95="on"] #root [data-slot="home-projects-scroll"]::before,
 html[data-win95="on"] #root [data-slot="home-projects-scroll"]::after,
 html[data-win95="on"] #root [data-slot="manage-models-scroll"]::before,
 html[data-win95="on"] #root [data-slot="manage-models-scroll"]::after {
-  background-image: none !important;
-  background: transparent !important;
+  display: none !important;
 }
 
 /* User message bubble (style only the actual text bubble, not the full-width wrapper!) */
