@@ -1,22 +1,7 @@
-﻿$ErrorActionPreference = "Stop"
-$asar = Join-Path $env:LOCALAPPDATA "Programs\@opencode-aidesktop\resources\app.asar"
-$bak  = "$asar.bak"
-$patcher = Join-Path $PSScriptRoot "patch-asar.mjs"
+﻿param(
+  [string]$AsarPath = (Join-Path $env:LOCALAPPDATA "Programs\@opencode-aidesktop\resources\app.asar")
+)
 
-if (Get-Process -Name "OpenCode" -ErrorAction SilentlyContinue) {
-  Write-Host "Закрываю OpenCode перед патчингом..." -ForegroundColor Yellow
-  Stop-Process -Name "OpenCode" -Force
-  Start-Sleep -Milliseconds 800
-}
-
-# If OpenCode updated itself (app.asar newer than backup and not patched), refresh backup cleanly
-if ((Test-Path $bak) -and (Test-Path $asar)) {
-  $hasHook = Select-String -Path $asar -Pattern "win95-trigger-command" -Quiet -ErrorAction SilentlyContinue
-  if (-not $hasHook) {
-    Write-Host "Обнаружена обновлённая версия OpenCode — обновляю app.asar.bak..." -ForegroundColor Cyan
-    Copy-Item -Path $asar -Destination $bak -Force
-  }
-}
-
-node $patcher $asar
-Write-Host "Готово! Можно запускать OpenCode." -ForegroundColor Green
+$ErrorActionPreference = "Stop"
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "ensure-patched.ps1") -AsarPath $AsarPath -Force -RepairShortcuts -RelaunchIfRunning
+Write-Host "Done. Win95 theme applied." -ForegroundColor Green
