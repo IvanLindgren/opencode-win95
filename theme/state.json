@@ -1,0 +1,11 @@
+﻿{
+  "enabled": true,
+  "wallpaper": "teal",
+  "colorScheme": "standard",
+  "sounds": true,
+  "showWelcome": true,
+  "retroCursor": true,
+  "clock24h": true,
+  "windowMaximized": false,
+  "windowBounds": null
+}

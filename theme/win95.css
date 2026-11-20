@@ -1,0 +1,2215 @@
+/* ============================================================================
+   OpenCode 95 — Authentic Windows 95 Desktop Environment & Full UI Theme
+   Scoped strictly to html[data-win95="on"] for clean 1-click toggling.
+   ============================================================================ */
+
+/* Authentic pixel-perfect Windows 95 fonts (Full Cyrillic + Latin!) */
+@font-face {
+  font-family: "MSW98UI";
+  src: url("./fonts/MSW98UI-Regular.woff2") format("woff2");
+  font-weight: 100 599;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "MSW98UI";
+  src: url("./fonts/MSW98UI-Bold.woff2") format("woff2");
+  font-weight: 600 900;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Fixedsys Excelsior";
+  src: url("./fonts/FixedsysExcelsior.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ---------- PASS-THROUGH WHEN WIN95 MODE IS OFF ---------- */
+html[data-win95="off"] #win95-desktop-layer,
+html[data-win95="off"] #win95-taskbar,
+html[data-win95="off"] #win95-start-menu,
+html[data-win95="off"] #win95-host-bar,
+html[data-win95="off"] #win95-context-menu,
+html[data-win95="off"] #win95-main-titlebar,
+html[data-win95="off"] #win95-main-menubar,
+html[data-win95="off"] #win95-main-statusbar,
+html[data-win95="off"] .win95-resize-handle,
+html[data-win95="off"] .win95-extra-window,
+html[data-win95="off"] .win95-modal-backdrop {
+  display: none !important;
+}
+
+html[data-win95="off"] #win95-main-window {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  transform: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 1 !important;
+}
+
+html[data-win95="off"] #win95-main-viewport {
+  position: relative !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+/* Reserve the same width in the app toolbar as in the replacement caption controls. */
+html[data-win95="off"] {
+  --w95-normal-controls-width: 204px;
+}
+
+html[data-win95="off"] #root header:is([data-slot="titlebar-v2"], [data-tauri-drag-region]) {
+  max-width: max(0px, calc(100% - var(--w95-normal-controls-width))) !important;
+}
+
+
+#win95-normal-controls {
+  display: none;
+}
+
+html[data-win95="off"] #win95-normal-controls {
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 36px;
+  width: var(--w95-normal-controls-width);
+  z-index: 2147483000;
+  -webkit-app-region: no-drag;
+  user-select: none;
+  gap: 0;
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-return-btn {
+  height: 24px;
+  width: 66px;
+  flex: none;
+  margin-right: 6px;
+  padding: 0 8px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: #c0c0c0;
+  color: #000000;
+  font-family: "Microsoft Sans Serif", "Tahoma", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #ffffff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-return-btn:hover {
+  background: #d4d4d4;
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-return-btn:active {
+  box-shadow: inset 1px 1px #0a0a0a, inset -1px -1px #ffffff, inset 2px 2px #808080;
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-norm-winbtn {
+  width: 44px;
+  height: 36px;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--v2-text-text-base, var(--text-base, #888));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-norm-winbtn:hover {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+html[data-win95="off"] #win95-normal-controls .w95-norm-winbtn.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* ============================================================================
+   WIN95 ACTIVE MODE — PALETTE, SCHEMES, WALLPAPERS, TYPOGRAPHY
+   ============================================================================ */
+
+html[data-win95="on"],
+html[data-win95="on"][data-color-scheme="light"],
+html[data-win95="on"][data-color-scheme="dark"] {
+  --w95-host-height: 24px;
+  --w95-taskbar-height: 28px;
+  --w95-work-height: calc(100dvh - var(--w95-host-height) - var(--w95-taskbar-height));
+
+  /* Core Win95 system palette (Standard Scheme) */
+  --w95-face: #c0c0c0;
+  --w95-face-alt: #d4d0c8;
+  --w95-light: #ffffff;
+  --w95-highlight: #dfdfdf;
+  --w95-shadow: #808080;
+  --w95-dark: #000000;
+  --w95-text: #000000;
+  --w95-text-muted: #404040;
+  --w95-text-disabled: #808080;
+  --w95-window-bg: #ffffff;
+  --w95-window-alt: #f4f4f0;
+  --w95-title-active: #000080;
+  --w95-title-active-end: #1084d0;
+  --w95-title-active-text: #ffffff;
+  --w95-title-inactive: #808080;
+  --w95-title-inactive-text: #ffffff;
+  --w95-selection-bg: #000080;
+  --w95-selection-text: #ffffff;
+  --w95-tooltip-bg: #ffffe1;
+  --w95-tooltip-text: #000000;
+  --w95-link: #0000ee;
+  --w95-code-bg: #f8f8f4;
+  --w95-term-bg: #000000;
+  --w95-term-fg: #c0c0c0;
+
+  /* Authentic 3D Bevels */
+  --w95-bevel-out: inset -1px -1px var(--w95-dark), inset 1px 1px var(--w95-light), inset -2px -2px var(--w95-shadow), inset 2px 2px var(--w95-highlight);
+  --w95-bevel-out-thin: inset -1px -1px var(--w95-shadow), inset 1px 1px var(--w95-light);
+  --w95-bevel-in: inset -1px -1px var(--w95-light), inset 1px 1px var(--w95-dark), inset -2px -2px var(--w95-highlight), inset 2px 2px var(--w95-shadow);
+  --w95-bevel-in-thin: inset -1px -1px var(--w95-light), inset 1px 1px var(--w95-shadow);
+  --w95-bevel-pressed: inset 1px 1px var(--w95-dark), inset -1px -1px var(--w95-light), inset 2px 2px var(--w95-shadow), inset -2px -2px var(--w95-highlight);
+
+  /* Fonts: Authentic pixel MS Sans Serif (Win95) + Fixedsys Excelsior (Full Cyrillic + Latin) */
+  --w95-font-ui: "MSW98UI", "Microsoft Sans Serif", sans-serif;
+  --w95-font-mono: "Fixedsys Excelsior", "Fixedsys", "Courier New", monospace;
+
+  /* Map OpenCode v1 & v2 semantic tokens directly to Win95! */
+  color-scheme: light !important;
+  --font-family-sans: var(--w95-font-ui) !important;
+  --font-family-text: var(--w95-font-ui) !important;
+  --v2-font-family-sans: var(--w95-font-ui) !important;
+  --font-sans: var(--w95-font-ui) !important;
+  --font-family-mono: var(--w95-font-mono) !important;
+  --font-mono: var(--w95-font-mono) !important;
+
+  --radius-xs: 0px !important;
+  --radius-sm: 0px !important;
+  --radius-md: 0px !important;
+  --radius-lg: 0px !important;
+  --radius-xl: 0px !important;
+  --tabs-compact-pill-radius: 0px !important;
+
+  /* OpenCode v1 tokens */
+  --background-base: var(--w95-face) !important;
+  --background-weak: var(--w95-window-bg) !important;
+  --background-strong: var(--w95-face) !important;
+  --background-stronger: var(--w95-highlight) !important;
+  --surface-base: var(--w95-face) !important;
+  --base: var(--w95-face) !important;
+  --base2: var(--w95-window-bg) !important;
+  --base3: var(--w95-highlight) !important;
+  --surface-base-hover: var(--w95-highlight) !important;
+  --surface-base-active: var(--w95-selection-bg) !important;
+  --surface-base-interactive-active: #00008022 !important;
+  --surface-inset-base: var(--w95-window-bg) !important;
+  --surface-inset-base-hover: var(--w95-window-bg) !important;
+  --surface-inset-strong: var(--w95-window-bg) !important;
+  --surface-inset-strong-hover: var(--w95-window-bg) !important;
+  --surface-raised-base: var(--w95-face) !important;
+  --surface-raised-base-hover: var(--w95-highlight) !important;
+  --surface-raised-base-active: var(--w95-shadow) !important;
+  --surface-raised-strong: var(--w95-face) !important;
+  --surface-raised-strong-hover: var(--w95-highlight) !important;
+  --surface-raised-stronger: var(--w95-window-bg) !important;
+  --surface-raised-stronger-non-alpha: var(--w95-face) !important;
+  --surface-float-base: var(--w95-face) !important;
+  --surface-float-base-hover: var(--w95-highlight) !important;
+  --surface-weak: var(--w95-highlight) !important;
+  --surface-weaker: var(--w95-face) !important;
+  --surface-strong: var(--w95-shadow) !important;
+  --surface-brand-base: var(--w95-selection-bg) !important;
+  --surface-brand-hover: #0000a8 !important;
+  --surface-interactive-base: var(--w95-selection-bg) !important;
+  --surface-interactive-hover: #0000a8 !important;
+  --surface-interactive-weak: #d4e0f8 !important;
+  --surface-interactive-weak-hover: #c0d4f8 !important;
+  --text-base: var(--w95-text) !important;
+  --text-strong: var(--w95-text) !important;
+  --text-weak: var(--w95-text-muted) !important;
+  --text-weaker: var(--w95-text-muted) !important;
+  --text-inverted-base: var(--w95-selection-text) !important;
+  --text-inverted-strong: var(--w95-selection-text) !important;
+  --text-on-brand-base: #ffffff !important;
+  --text-interactive-base: #000080 !important;
+  --icon-base: var(--w95-text) !important;
+  --icon-strong-base: var(--w95-text) !important;
+  --icon-weak-base: var(--w95-text-muted) !important;
+  --border-base: var(--w95-shadow) !important;
+  --border-weak-base: var(--w95-shadow) !important;
+  --border-strong-base: var(--w95-dark) !important;
+  --border-selected: var(--w95-selection-bg) !important;
+
+  /* OpenCode v2 tokens */
+  --v2-background-bg-base: var(--w95-window-bg) !important;
+  --v2-background-bg-deep: var(--w95-face) !important;
+  --v2-background-bg-layer-01: var(--w95-face) !important;
+  --v2-background-bg-layer-02: var(--w95-highlight) !important;
+  --v2-background-bg-layer-03: var(--w95-face) !important;
+  --v2-background-bg-layer-04: var(--w95-shadow) !important;
+  --v2-background-bg-inverse: var(--w95-selection-bg) !important;
+  --v2-background-bg-contrast: var(--w95-selection-bg) !important;
+  --v2-background-bg-button-neutral: var(--w95-face) !important;
+  --v2-background-bg-accent: var(--w95-selection-bg) !important;
+
+  --v2-text-text-base: var(--w95-text) !important;
+  --v2-text-text-muted: var(--w95-text-muted) !important;
+  --v2-text-text-faint: #555555 !important;
+  --v2-text-text-inverse: var(--w95-selection-text) !important;
+  --v2-text-text-contrast: var(--w95-selection-text) !important;
+  --v2-text-text-accent: var(--w95-link) !important;
+  --v2-text-text-accent-hover: #000080 !important;
+  --v2-text-text-code-accent: #000080 !important;
+
+  --v2-icon-icon-base: var(--w95-text) !important;
+  --v2-icon-icon-muted: var(--w95-text-muted) !important;
+  --v2-icon-icon-inverse: #ffffff !important;
+  --v2-icon-icon-contrast: #ffffff !important;
+  --v2-icon-icon-accent: var(--w95-selection-bg) !important;
+  --v2-icon-icon-accent-hover: #0000a8 !important;
+
+  --v2-border-border-muted: var(--w95-shadow) !important;
+  --v2-border-border-base: var(--w95-shadow) !important;
+  --v2-border-border-strong: var(--w95-dark) !important;
+  --v2-border-border-inverse: var(--w95-dark) !important;
+  --v2-border-border-focus: var(--w95-selection-bg) !important;
+
+  --v2-overlay-simple-overlay-hover: rgba(0, 0, 128, 0.1) !important;
+  --v2-overlay-simple-overlay-pressed: rgba(0, 0, 128, 0.18) !important;
+  --v2-overlay-simple-overlay-scrim: rgba(0, 0, 0, 0.35) !important;
+  --v2-overlay-gradient-depth-overlay-depth-top: transparent !important;
+  --v2-overlay-gradient-depth-overlay-depth-bot: transparent !important;
+
+  --v2-elevation-raised: var(--w95-bevel-out) !important;
+  --v2-elevation-floating: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.45) !important;
+  --v2-elevation-overlay: var(--w95-bevel-out), 3px 3px 0 rgba(0, 0, 0, 0.55) !important;
+  --v2-elevation-button-neutral: var(--w95-bevel-out) !important;
+  --v2-elevation-button-contrast: var(--w95-bevel-out) !important;
+}
+
+/* ---------- OPTIONAL CLASSIC WIN95 COLOR SCHEMES ---------- */
+html[data-win95="on"][data-win95-scheme="slate"] {
+  --w95-face: #b8c4d0;
+  --w95-highlight: #d8e2ec;
+  --w95-shadow: #6e7d8c;
+  --w95-title-active: #1c4a78;
+  --w95-title-active-end: #3874a8;
+  --w95-selection-bg: #1c4a78;
+}
+
+html[data-win95="on"][data-win95-scheme="desert"] {
+  --w95-face: #d5ccbb;
+  --w95-highlight: #eae5dc;
+  --w95-shadow: #a28d68;
+  --w95-title-active: #008080;
+  --w95-title-active-end: #18a098;
+  --w95-selection-bg: #008080;
+}
+
+html[data-win95="on"][data-win95-scheme="plum"] {
+  --w95-face: #b8a8b8;
+  --w95-highlight: #d8ccd8;
+  --w95-shadow: #786078;
+  --w95-title-active: #482858;
+  --w95-title-active-end: #784888;
+  --w95-selection-bg: #482858;
+}
+
+html[data-win95="on"][data-win95-scheme="hc-dark"] {
+  color-scheme: dark !important;
+  --w95-face: #242424;
+  --w95-highlight: #3a3a3a;
+  --w95-light: #686868;
+  --w95-shadow: #121212;
+  --w95-dark: #000000;
+  --w95-text: #f0f0f0;
+  --w95-text-muted: #b8b8b8;
+  --w95-window-bg: #0c0c0c;
+  --w95-window-alt: #161616;
+  --w95-title-active: #000080;
+  --w95-title-active-end: #0000b0;
+  --w95-selection-bg: #0000a8;
+  --w95-selection-text: #ffffff;
+  --w95-link: #55ffff;
+  --w95-code-bg: #101010;
+  --v2-text-text-faint: #9e9e9e !important;
+  --v2-text-text-code-accent: #55ffff !important;
+}
+
+/* ---------- GLOBAL PIXEL CRISP RENDERING & ZERO ROUNDING ---------- */
+/* NOTE: Never change html font-size (Tailwind v4 uses rem relative to html 16px!) */
+html[data-win95="on"],
+html[data-win95="on"] body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  font-family: var(--w95-font-ui) !important;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: auto !important;
+  text-rendering: optimizeSpeed !important;
+}
+
+/* Authentic Windows 95 Custom Checkboxes & Radio Buttons inside Win95 Shell */
+.win95-extra-window input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  margin: 0 !important;
+  background: var(--w95-window-bg) !important;
+  box-shadow: var(--w95-bevel-in) !important;
+  border: 0 !important;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  cursor: pointer;
+}
+
+.win95-extra-window input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath d='M1 4 L3 6 L8 1 L8 3 L3 8 L1 6 Z' fill='%23000000'/%3E%3C/svg%3E");
+}
+
+.win95-extra-window input[type="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  min-height: 12px !important;
+  margin: 0 !important;
+  background: var(--w95-window-bg) !important;
+  border: 1px solid var(--w95-shadow) !important;
+  box-shadow: inset 1px 1px var(--w95-dark), inset -1px -1px var(--w95-highlight) !important;
+  border-radius: 50% !important;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  cursor: pointer;
+}
+
+.win95-extra-window input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 4px;
+  height: 4px;
+  background: var(--w95-text);
+  border-radius: 50% !important;
+}
+
+html[data-win95="on"] *,
+html[data-win95="on"] *::before,
+html[data-win95="on"] *::after {
+  border-radius: 0 !important;
+  -webkit-font-smoothing: none !important;
+  font-family: var(--w95-font-ui);
+  letter-spacing: 0 !important;
+  font-variant-ligatures: none !important;
+}
+
+html[data-win95="on"] code,
+html[data-win95="on"] pre,
+html[data-win95="on"] kbd,
+html[data-win95="on"] samp,
+html[data-win95="on"] [class*="font-mono"],
+html[data-win95="on"] [data-component="code"],
+html[data-win95="on"] [data-component="code"] *,
+html[data-win95="on"] [data-component="bash-output"],
+html[data-win95="on"] [data-component="bash-output"] *,
+html[data-win95="on"] [data-component="diff"],
+html[data-win95="on"] [data-component="diff"] *,
+html[data-win95="on"] .xterm,
+html[data-win95="on"] .xterm * {
+  font-family: var(--w95-font-mono) !important;
+}
+
+/* ---------- RETRO PIXEL CURSORS ---------- */
+html[data-win95="on"][data-win95-cursor="on"] {
+  cursor: var(--w95-cursor-arrow, default);
+}
+
+html[data-win95="on"][data-win95-cursor="on"] button,
+html[data-win95="on"][data-win95-cursor="on"] a,
+html[data-win95="on"][data-win95-cursor="on"] [role="button"],
+html[data-win95="on"][data-win95-cursor="on"] [role="menuitem"],
+html[data-win95="on"][data-win95-cursor="on"] [role="tab"],
+html[data-win95="on"][data-win95-cursor="on"] .w95-desk-icon {
+  cursor: var(--w95-cursor-pointer, pointer);
+}
+
+html[data-win95="on"][data-win95-cursor="on"] input[type="text"],
+html[data-win95="on"][data-win95-cursor="on"] input:not([type]),
+html[data-win95="on"][data-win95-cursor="on"] textarea,
+html[data-win95="on"][data-win95-cursor="on"] [contenteditable="true"] {
+  cursor: var(--w95-cursor-text, text);
+}
+
+/* ============================================================================
+   CLASSIC WINDOWS 95 SCROLLBARS (Dithered track + 3D raised thumb & arrows)
+   ============================================================================ */
+html[data-win95="on"] ::-webkit-scrollbar {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-track {
+  background-color: var(--w95-face) !important;
+  background-image:
+    linear-gradient(45deg, var(--w95-light) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--w95-light) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--w95-light) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--w95-light) 75%) !important;
+  background-size: 2px 2px !important;
+  background-position: 0 0, 0 1px, 1px -1px, -1px 0 !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-thumb {
+  background-color: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  border: 0 !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-corner {
+  background-color: var(--w95-face) !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button {
+  width: 16px !important;
+  height: 16px !important;
+  background-color: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button:active {
+  box-shadow: var(--w95-bevel-pressed) !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpolygon points='4,2 7,6 1,6' fill='%23000'/%3E%3C/svg%3E") !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button:vertical:increment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpolygon points='1,2 7,2 4,6' fill='%23000'/%3E%3C/svg%3E") !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button:horizontal:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpolygon points='2,4 6,1 6,7' fill='%23000'/%3E%3C/svg%3E") !important;
+}
+
+html[data-win95="on"] ::-webkit-scrollbar-button:horizontal:increment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpolygon points='6,4 2,1 2,7' fill='%23000'/%3E%3C/svg%3E") !important;
+}
+
+/* ============================================================================
+   WINDOWS 95 DESKTOP WALLPAPERS (8 AUTHENTIC RETRO PATTERNS)
+   ============================================================================ */
+#win95-desktop-layer {
+  position: fixed;
+  inset: var(--w95-host-height) 0 var(--w95-taskbar-height) 0;
+  user-select: none;
+  z-index: 1;
+  overflow: hidden;
+  background-color: #008080;
+}
+
+/* 1. Classic Windows 95 Teal (#008080 — Screenshot #1) */
+html[data-win95="on"][data-win95-wallpaper="teal"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="teal"] {
+  background-color: #008080;
+  background-image: none;
+}
+
+/* 2. Woven Golden-Brown Basketweave (Direct homage to Screenshot #2!) */
+html[data-win95="on"][data-win95-wallpaper="woven"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="woven"] {
+  background-color: #9e5c1f;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 212, 110, 0.36) 0px, rgba(255, 212, 110, 0.36) 3px, rgba(64, 28, 4, 0.45) 3px, rgba(64, 28, 4, 0.45) 6px, transparent 6px, transparent 12px),
+    repeating-linear-gradient(-45deg, rgba(235, 168, 56, 0.48) 0px, rgba(235, 168, 56, 0.48) 3px, rgba(84, 38, 6, 0.55) 3px, rgba(84, 38, 6, 0.55) 6px, rgba(196, 120, 32, 0.3) 6px, rgba(196, 120, 32, 0.3) 12px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0px, rgba(0, 0, 0, 0.14) 1px, transparent 1px, transparent 4px);
+  background-size: 24px 24px;
+}
+
+/* 3. Classic Win95 Clouds */
+html[data-win95="on"][data-win95-wallpaper="clouds"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="clouds"] {
+  background-color: #5b9bd5;
+  background-image:
+    radial-gradient(ellipse 90px 44px at 22% 28%, rgba(255, 255, 255, 0.92) 45%, rgba(220, 236, 250, 0.6) 65%, transparent 72%),
+    radial-gradient(ellipse 70px 36px at 29% 25%, rgba(255, 255, 255, 0.95) 50%, transparent 72%),
+    radial-gradient(ellipse 110px 48px at 74% 38%, rgba(255, 255, 255, 0.88) 45%, rgba(220, 236, 250, 0.55) 65%, transparent 72%),
+    radial-gradient(ellipse 80px 36px at 66% 35%, rgba(255, 255, 255, 0.9) 48%, transparent 72%),
+    radial-gradient(ellipse 130px 52px at 48% 72%, rgba(255, 255, 255, 0.85) 45%, rgba(210, 230, 250, 0.5) 65%, transparent 72%),
+    linear-gradient(180deg, #3c7ec2 0%, #6baae0 55%, #a4cef0 100%);
+}
+
+/* 4. Classic Red Bricks */
+html[data-win95="on"][data-win95-wallpaper="bricks"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="bricks"] {
+  background-color: #802018;
+  background-image:
+    linear-gradient(335deg, #98281c 23px, transparent 23px),
+    linear-gradient(155deg, #a83020 23px, transparent 23px),
+    linear-gradient(335deg, #98281c 23px, transparent 23px),
+    linear-gradient(155deg, #a83020 23px, transparent 23px);
+  background-size: 58px 58px;
+  background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+}
+
+/* 5. Classic Tartan / Plaid */
+html[data-win95="on"][data-win95-wallpaper="tartan"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="tartan"] {
+  background-color: #103828;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0, transparent 24px, rgba(0, 0, 128, 0.45) 24px, rgba(0, 0, 128, 0.45) 36px, transparent 36px, transparent 42px, rgba(200, 32, 32, 0.5) 42px, rgba(200, 32, 32, 0.5) 46px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 24px, rgba(0, 0, 128, 0.45) 24px, rgba(0, 0, 128, 0.45) 36px, transparent 36px, transparent 42px, rgba(200, 32, 32, 0.5) 42px, rgba(200, 32, 32, 0.5) 46px),
+    repeating-linear-gradient(90deg, transparent 0, transparent 10px, rgba(255, 220, 60, 0.18) 10px, rgba(255, 220, 60, 0.18) 12px);
+}
+
+/* 6. Blue Steel Rivets */
+html[data-win95="on"][data-win95-wallpaper="steel"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="steel"] {
+  background-color: #365470;
+  background-image:
+    radial-gradient(#7898b8 1px, transparent 1px),
+    radial-gradient(#1a2e42 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255,255,255,0.06) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.06) 75%, transparent 75%);
+  background-size: 16px 16px, 16px 16px, 16px 16px;
+  background-position: 0 0, 1px 1px, 0 0;
+}
+
+/* 7. Plus! Forest */
+html[data-win95="on"][data-win95-wallpaper="forest"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="forest"] {
+  background-color: #1f4828;
+  background-image:
+    linear-gradient(45deg, #275832 25%, transparent 25%, transparent 75%, #275832 75%),
+    linear-gradient(45deg, #275832 25%, transparent 25%, transparent 75%, #275832 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+/* 8. Midnight 95 */
+html[data-win95="on"][data-win95-wallpaper="midnight"] #win95-desktop-layer,
+.w95-wp-preview[data-wp="midnight"] {
+  background-color: #091430;
+  background-image:
+    radial-gradient(#ffffff 1px, transparent 1px),
+    radial-gradient(#80b8ff 1px, transparent 1px),
+    radial-gradient(#ffff99 1px, transparent 1px);
+  background-size: 97px 73px, 131px 89px, 173px 113px;
+  background-position: 12px 18px, 55px 41px, 90px 10px;
+}
+
+/* ============================================================================
+   DESKTOP HOST BAR (Slim top-edge drag strip + Electron Host window controls)
+   ============================================================================ */
+#win95-host-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--w95-host-height);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 6px;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out);
+  -webkit-app-region: drag;
+  user-select: none;
+  font-size: 11px;
+  color: var(--w95-text);
+}
+
+#win95-host-bar .w95-host-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  min-width: 0;
+}
+
+#win95-host-bar .w95-host-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#win95-host-bar .w95-host-title svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+#win95-host-bar .w95-host-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+#win95-host-bar .w95-host-pill {
+  height: 16px;
+  padding: 0 6px;
+  margin-right: 4px;
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out);
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#win95-host-bar .w95-host-pill:active {
+  box-shadow: var(--w95-bevel-pressed);
+  padding: 1px 5px 0 7px;
+}
+
+/* ============================================================================
+   DESKTOP ICONS (Left Vertical Grid, Authentic Win95 Selection Highlight)
+   ============================================================================ */
+#win95-desktop-icons {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.w95-desk-icon {
+  pointer-events: auto;
+  width: 78px;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ffffff;
+  text-align: center;
+  user-select: none;
+}
+
+.w95-desk-icon .w95-icon-img {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.45));
+}
+
+.w95-desk-icon .w95-icon-img svg {
+  width: 32px;
+  height: 32px;
+}
+
+.w95-desk-icon .w95-icon-label {
+  font-size: 11px;
+  line-height: 1.25;
+  padding: 1px 3px;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #000000;
+  word-wrap: break-word;
+  max-width: 76px;
+}
+
+.w95-desk-icon.selected .w95-icon-img {
+  filter: drop-shadow(0 0 0 #000080) brightness(0.85) saturate(1.4);
+}
+
+.w95-desk-icon.selected .w95-icon-label {
+  background: #000080;
+  color: #ffffff;
+  text-shadow: none;
+  outline: 1px dotted #ffff00;
+}
+
+/* ============================================================================
+   CLASSIC WINDOWS 95 WINDOW FRAME (Main OpenCode Window + Extra Windows)
+   ============================================================================ */
+.w95-btn {
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out);
+  font-family: var(--w95-font-ui);
+  font-size: 11px;
+  padding: 4px 12px;
+  min-height: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.w95-btn:active:not(:disabled) {
+  box-shadow: var(--w95-bevel-pressed);
+  padding: 5px 11px 3px 13px;
+}
+
+.w95-btn:focus-visible {
+  outline: 1px dotted var(--w95-dark);
+  outline-offset: -4px;
+}
+
+.w95-btn.default-btn {
+  outline: 1px solid var(--w95-dark);
+  outline-offset: -1px;
+  box-shadow: inset -2px -2px var(--w95-shadow), inset 2px 2px var(--w95-light), inset -1px -1px var(--w95-dark), inset 1px 1px var(--w95-dark);
+}
+
+/* Tiny 16x14 Win95 Titlebar Control Buttons (_, □, X) */
+.w95-cap-btn {
+  width: 16px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.w95-cap-btn:active {
+  box-shadow: var(--w95-bevel-pressed);
+  padding: 1px 0 0 1px;
+}
+
+.w95-cap-btn svg {
+  width: 10px;
+  height: 10px;
+  display: block;
+}
+
+/* Main OpenCode 95 Window */
+html[data-win95="on"] #win95-main-window {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.35);
+  padding: 3px;
+  box-sizing: border-box;
+  min-width: min(520px, 100vw);
+  min-height: min(360px, var(--w95-work-height));
+  max-width: 100vw;
+  max-height: var(--w95-work-height);
+}
+
+html[data-win95="on"] #win95-main-window.minimized {
+  display: none !important;
+}
+
+html[data-win95="on"] #win95-main-window.maximized {
+  top: var(--w95-host-height) !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: var(--w95-work-height) !important;
+  padding: 2px !important;
+  box-shadow: var(--w95-bevel-out) !important;
+}
+
+/* Window Titlebar — Pure Solid Windows 95 Navy (#000080, NO Win98 gradient!) */
+.w95-titlebar {
+  height: 20px;
+  min-height: 20px;
+  background: var(--w95-title-active);
+  color: var(--w95-title-active-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 3px 2px 4px;
+  gap: 6px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.w95-window-inactive .w95-titlebar {
+  background: var(--w95-title-inactive) !important;
+  color: var(--w95-title-inactive-text) !important;
+}
+
+.w95-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.w95-titlebar-left svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.w95-titlebar-text {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+.w95-titlebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Classic Win95 Menu Bar (File Edit View Go Tools Window Help) */
+#win95-main-menubar {
+  min-height: 20px;
+  flex-wrap: wrap;
+  background: var(--w95-face);
+  border-bottom: 1px solid var(--w95-shadow);
+  box-shadow: inset 0 -1px var(--w95-light);
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  gap: 1px;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 40;
+}
+
+.w95-menubar-group {
+  position: relative;
+  display: flex;
+}
+
+.w95-menubar-item {
+  height: 18px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--w95-text);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.w95-menubar-item:hover,
+.w95-menubar-group.open > .w95-menubar-item {
+  background: var(--w95-selection-bg);
+  color: var(--w95-selection-text);
+}
+
+.w95-menubar-item u {
+  text-decoration: underline;
+}
+
+.w95-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: var(--w95-menu-offset, 0px);
+  width: max-content;
+  min-width: min(196px, 100vw);
+  max-width: 100vw;
+  overflow-y: auto;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.35);
+  padding: 3px;
+  display: none;
+  flex-direction: column;
+  z-index: 9999;
+}
+
+.w95-menubar-group.open > .w95-menu-dropdown {
+  display: flex;
+}
+
+.w95-menu-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 4px 14px 4px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--w95-text);
+  font-size: 11px;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.w95-menu-entry:hover {
+  background: var(--w95-selection-bg);
+  color: var(--w95-selection-text);
+}
+
+.w95-menu-entry .w95-accel {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.w95-menu-sep {
+  height: 0;
+  margin: 3px 2px;
+  border-top: 1px solid var(--w95-shadow);
+  border-bottom: 1px solid var(--w95-light);
+}
+
+/* Sunken Inner Viewport hosting #root */
+html[data-win95="on"] #win95-main-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--w95-window-bg);
+  box-shadow: var(--w95-bevel-in);
+  padding: 2px;
+  box-sizing: border-box;
+  /* Contain position:fixed children inside #root cleanly inside the Win95 window! */
+  transform: translateZ(0);
+}
+
+/* Force #root and its full-viewport utility classes to fit inside the Win95 window */
+html[data-win95="on"] #root {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+html[data-win95="on"] #root .h-dvh,
+html[data-win95="on"] #root .h-screen,
+html[data-win95="on"] #root .min-h-dvh,
+html[data-win95="on"] #root .min-h-screen {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+
+html[data-win95="on"] #root .w-screen {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Classic Win95 Status Bar at bottom of OpenCode window */
+#win95-main-statusbar {
+  height: 20px;
+  min-height: 20px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--w95-text);
+  flex-shrink: 0;
+}
+
+.w95-status-pane {
+  height: 18px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: var(--w95-bevel-in-thin);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w95-status-pane.grow {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  line-height: 18px;
+}
+
+#win95-main-window.maximized .w95-status-grip {
+  display: none;
+}
+
+.w95-status-grip {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background-image:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 2px,
+      var(--w95-shadow) 2px,
+      var(--w95-shadow) 3px,
+      var(--w95-light) 3px,
+      var(--w95-light) 4px
+    );
+  cursor: nwse-resize;
+}
+
+/* 8-Way Resize Handles for floating OpenCode window */
+.win95-resize-handle {
+  position: absolute;
+  z-index: 60;
+}
+
+#win95-main-window.maximized .win95-resize-handle {
+  display: none;
+}
+
+.win95-resize-handle.n  { top: -3px; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.win95-resize-handle.s  { bottom: -3px; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.win95-resize-handle.w  { left: -3px; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.win95-resize-handle.e  { right: -3px; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.win95-resize-handle.nw { top: -3px; left: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
+.win95-resize-handle.ne { top: -3px; right: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
+.win95-resize-handle.sw { bottom: -3px; left: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
+.win95-resize-handle.se { bottom: -3px; right: -3px; width: 14px; height: 14px; cursor: nwse-resize; }
+
+/* ============================================================================
+   TASKBAR
+   ============================================================================ */
+#win95-taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--w95-taskbar-height);
+  z-index: 9500;
+  background: var(--w95-face);
+  border-top: 1px solid var(--w95-light);
+  box-shadow: inset 0 1px var(--w95-highlight);
+  display: flex;
+  align-items: center;
+  padding: 2px 3px;
+  gap: 3px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+#win95-start-btn {
+  height: 24px;
+  padding: 0 7px 0 5px;
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+#win95-start-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+#win95-start-btn.open,
+#win95-start-btn:active {
+  box-shadow: var(--w95-bevel-pressed);
+  padding: 1px 6px 0 6px;
+  outline: 1px dotted var(--w95-dark);
+  outline-offset: -4px;
+}
+
+.w95-tb-divider {
+  width: 2px;
+  height: 20px;
+  margin: 0 2px;
+  border-left: 1px solid var(--w95-shadow);
+  border-right: 1px solid var(--w95-light);
+  flex-shrink: 0;
+}
+
+#win95-taskbar-windows {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.w95-tb-winbtn {
+  height: 24px;
+  min-width: 28px;
+  max-width: 180px;
+  flex: 0 1 160px;
+  padding: 0 6px;
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.w95-tb-winbtn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.w95-tb-winbtn > span:first-child {
+  flex: none;
+  display: flex;
+}
+
+.w95-tb-winbtn > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.w95-tb-winbtn.active {
+  font-weight: 700;
+  box-shadow: var(--w95-bevel-pressed);
+  background-color: var(--w95-highlight);
+  background-image:
+    linear-gradient(45deg, var(--w95-light) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--w95-light) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--w95-light) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--w95-light) 75%);
+  background-size: 2px 2px;
+  background-position: 0 0, 0 1px, 1px -1px, -1px 0;
+  padding: 1px 5px 0 7px;
+}
+
+#win95-tray {
+  height: 24px;
+  padding: 0 7px 0 5px;
+  box-shadow: var(--w95-bevel-in-thin);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--w95-text);
+}
+
+.w95-tray-icon {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.w95-tray-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+#win95-clock {
+  font-size: 11px;
+  font-weight: 400;
+  min-width: 44px;
+  text-align: center;
+}
+
+/* ============================================================================
+   CLASSIC WINDOWS 95 START MENU (Vertical Banner + Cascading Submenus!)
+   ============================================================================ */
+#win95-start-menu {
+  position: fixed;
+  left: 2px;
+  bottom: var(--w95-taskbar-height);
+  z-index: 9800;
+  display: none;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.45);
+  padding: 3px;
+  min-width: min(220px, 100vw);
+  max-width: calc(100vw - 4px);
+  user-select: none;
+}
+
+#win95-start-menu.open {
+  display: flex;
+}
+
+.w95-start-banner {
+  width: 26px;
+  background: var(--w95-title-inactive);
+  color: #c0c0c0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.w95-start-banner-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #d8d8d8;
+  white-space: nowrap;
+}
+
+.w95-start-banner-text strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.w95-start-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1px 0;
+}
+
+.w95-start-group {
+  position: relative;
+}
+
+.w95-start-item {
+  height: clamp(22px, calc((var(--w95-work-height) - 20px) / 8), 30px);
+  padding: 0 10px 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--w95-text);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.w95-start-item svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.w95-start-item .w95-start-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.w95-start-item .w95-start-arrow {
+  font-size: 9px;
+  margin-left: 8px;
+}
+
+.w95-start-item:hover,
+.w95-start-item:focus-visible,
+.w95-start-group.submenu-open > .w95-start-item {
+  background: var(--w95-selection-bg);
+  color: var(--w95-selection-text);
+}
+
+.w95-start-submenu {
+  position: absolute;
+  left: calc(var(--w95-submenu-left, 100% - 2px) + var(--w95-submenu-x, 0px));
+  top: calc(var(--w95-submenu-top, -3px) + var(--w95-submenu-y, 0px));
+  min-width: min(210px, calc(100vw - 8px));
+  max-width: calc(100vw - 8px);
+  max-height: var(--w95-work-height);
+  overflow-y: auto;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.45);
+  padding: 3px;
+  display: none;
+  flex-direction: column;
+  z-index: 9850;
+}
+
+.w95-start-group.submenu-open > .w95-start-submenu {
+  display: flex;
+}
+
+.w95-start-subitem {
+  min-height: 24px;
+  flex-shrink: 0;
+  padding: 2px 10px 2px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--w95-text);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.w95-start-subitem svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.w95-start-subitem:hover,
+.w95-start-subitem:focus-visible {
+  background: var(--w95-selection-bg);
+  color: var(--w95-selection-text);
+}
+
+/* ============================================================================
+   DESKTOP RIGHT-CLICK CONTEXT MENU
+   ============================================================================ */
+#win95-context-menu {
+  position: fixed;
+  z-index: 9900;
+  display: none;
+  min-width: 185px;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  flex-direction: column;
+}
+
+#win95-context-menu.open {
+  display: flex;
+  max-height: var(--w95-work-height);
+  overflow-y: auto;
+}
+
+/* ============================================================================
+   EXTRA AUTHENTIC WIN95 FLOATING WINDOWS (Welcome, Display, System, Run, Shut Down, Recycle Bin)
+   ============================================================================ */
+.win95-extra-window {
+  position: fixed;
+  z-index: 50;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.45);
+  padding: 3px;
+  min-height: min(var(--w95-dialog-height, 0px), var(--w95-work-height));
+  max-height: var(--w95-work-height);
+  max-width: 100vw;
+  display: none;
+  flex-direction: column;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.win95-extra-window.open {
+  display: flex;
+}
+
+.win95-extra-window.minimized {
+  display: none !important;
+}
+
+.win95-extra-window > :not(.w95-titlebar) {
+  min-height: 0;
+  overflow: auto;
+}
+
+.w95-dialog-body {
+  padding: 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--w95-text);
+}
+
+/* Welcome to OpenCode 95 (Direct homage to Screenshot #1!) */
+.w95-welcome-heading {
+  font-size: 21px;
+  font-weight: 400;
+  margin: 4px 0 12px 0;
+  color: var(--w95-text);
+  letter-spacing: -0.3px;
+}
+
+.w95-welcome-heading b {
+  font-weight: 800;
+}
+
+.w95-welcome-heading .w95-95 {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 var(--w95-shadow);
+  font-weight: 400;
+}
+
+.w95-welcome-grid {
+  display: grid;
+  grid-template-columns: 1fr 126px;
+  gap: 12px;
+  align-items: start;
+}
+
+.w95-welcome-tipbox {
+  background: #ffffe1;
+  color: #000000;
+  box-shadow: var(--w95-bevel-in);
+  padding: 12px;
+  min-height: 205px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.w95-welcome-tip-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.w95-welcome-tip-top svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.w95-welcome-crt {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.w95-welcome-crt svg {
+  width: 156px;
+  height: 116px;
+}
+
+.w95-welcome-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.w95-welcome-buttons .w95-btn {
+  width: 100%;
+}
+
+.w95-welcome-footer {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--w95-shadow);
+  box-shadow: inset 0 1px var(--w95-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+/* Classic Win95 Tabbed Properties (Display Properties / System Properties — Screenshot #2!) */
+.w95-tabs-strip {
+  display: flex;
+  align-items: flex-end;
+  padding-left: 2px;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 2;
+}
+
+.w95-tab-btn {
+  border: 0;
+  background: var(--w95-face);
+  color: var(--w95-text);
+  padding: 4px 10px 3px 10px;
+  font-size: 11px;
+  box-shadow: inset 1px 1px var(--w95-light), inset 2px 2px var(--w95-highlight), inset -1px 0 var(--w95-dark), inset -2px 0 var(--w95-shadow);
+  margin-right: 1px;
+  position: relative;
+}
+
+.w95-tab-btn.active {
+  padding: 5px 11px 5px 11px;
+  margin-bottom: -1px;
+  z-index: 3;
+  font-weight: 700;
+}
+
+.w95-tab-panel {
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out);
+  padding: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* CRT Monitor Live Preview in Display Properties */
+.w95-crt-preview-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.w95-crt-monitor {
+  width: 184px;
+  padding: 10px 12px 14px 12px;
+  background: #c0c0c0;
+  box-shadow: var(--w95-bevel-out);
+  position: relative;
+}
+
+.w95-crt-screen {
+  width: 160px;
+  height: 106px;
+  box-shadow: var(--w95-bevel-in);
+  position: relative;
+  overflow: hidden;
+}
+
+.w95-crt-mini-win {
+  position: absolute;
+  top: 14px;
+  left: 24px;
+  width: 110px;
+  height: 66px;
+  background: var(--w95-face);
+  box-shadow: var(--w95-bevel-out);
+  padding: 2px;
+}
+
+.w95-crt-mini-bar {
+  height: 11px;
+  background: var(--w95-title-active);
+  margin-bottom: 2px;
+}
+
+.w95-crt-mini-body {
+  height: 47px;
+  background: var(--w95-window-bg);
+  box-shadow: var(--w95-bevel-in-thin);
+}
+
+.w95-crt-mini-tb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 11px;
+  background: var(--w95-face);
+  border-top: 1px solid #fff;
+}
+
+.w95-listbox {
+  background: var(--w95-window-bg);
+  color: var(--w95-text);
+  box-shadow: var(--w95-bevel-in);
+  height: 116px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.w95-listbox-item {
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.w95-listbox-item.selected {
+  background: var(--w95-selection-bg);
+  color: var(--w95-selection-text);
+  outline: 1px dotted #ffff00;
+}
+
+.w95-fieldset {
+  border: 1px solid var(--w95-shadow);
+  box-shadow: 1px 1px 0 var(--w95-light), inset 1px 1px 0 var(--w95-light);
+  padding: 8px 10px 10px 10px;
+  margin: 0 0 10px 0;
+}
+
+.w95-fieldset legend {
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--w95-text);
+}
+
+.w95-input {
+  background: var(--w95-window-bg);
+  color: var(--w95-text);
+  border: 0;
+  box-shadow: var(--w95-bevel-in);
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: var(--w95-font-ui);
+  outline: none;
+}
+
+.w95-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ============================================================================
+   DEEP SKINNING OF OPENCODE INTERNAL COMPONENTS (v1 & v2 SolidJS + Tailwind)
+   ============================================================================ */
+
+/* 1. OpenCode internal header becomes Win95 Document Toolbar / Tab Strip */
+html[data-win95="on"] #root header[data-slot="titlebar-v2"],
+html[data-win95="on"] #root header[data-tauri-drag-region] {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: 0 !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  background: var(--w95-face) !important;
+  border-bottom: 1px solid var(--w95-shadow) !important;
+  box-shadow: inset 0 -1px var(--w95-light) !important;
+  -webkit-app-region: no-drag !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+html[data-win95="on"] #root header[data-slot="titlebar-v2"] *,
+html[data-win95="on"] #root header[data-tauri-drag-region] * {
+  -webkit-app-region: no-drag !important;
+}
+
+/* Titlebar session tabs -> classic Win95 folder tabs */
+html[data-win95="on"] #root [data-slot="titlebar-tab-item"] {
+  background: var(--w95-face) !important;
+  box-shadow: inset 1px 1px var(--w95-light), inset -1px 0 var(--w95-dark), inset -2px 0 var(--w95-shadow) !important;
+  padding-left: 6px !important;
+  padding-right: 4px !important;
+  height: 24px !important;
+  margin-top: 3px !important;
+}
+
+html[data-win95="on"] #root [data-slot="titlebar-tab-item"][data-active="true"] {
+  background: var(--w95-window-bg) !important;
+  box-shadow: inset 1px 1px var(--w95-light), inset 2px 2px var(--w95-highlight), inset -1px 0 var(--w95-dark), inset -2px 0 var(--w95-shadow) !important;
+  font-weight: 700 !important;
+  height: 27px !important;
+  margin-top: 1px !important;
+}
+
+/* 2. Buttons (v1 & v2 & icon buttons) -> Classic 3D Win95 Buttons */
+html[data-win95="on"] [data-component="button"],
+html[data-win95="on"] [data-component="button-v2"],
+html[data-win95="on"] [data-component="split-button-v2-action"],
+html[data-win95="on"] [data-component="split-button-v2-menu-trigger"] {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  border: 0 !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  transition: none !important;
+}
+
+html[data-win95="on"] [data-component="button"]:hover:not(:disabled),
+html[data-win95="on"] [data-component="button-v2"]:hover:not(:disabled) {
+  background: var(--w95-highlight) !important;
+}
+
+html[data-win95="on"] [data-component="button"]:active:not(:disabled),
+html[data-win95="on"] [data-component="button-v2"]:active:not(:disabled),
+html[data-win95="on"] [data-component="button"][data-active="true"],
+html[data-win95="on"] [data-component="button"][data-selected="true"] {
+  box-shadow: var(--w95-bevel-pressed) !important;
+}
+
+html[data-win95="on"] [data-component="button"][data-variant="primary"],
+html[data-win95="on"] [data-component="button-v2"][data-variant="primary"],
+html[data-win95="on"] [data-component="button-v2"][data-variant="contrast"] {
+  background: var(--w95-selection-bg) !important;
+  color: var(--w95-selection-text) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+}
+
+html[data-win95="on"] [data-component="button"][data-variant="ghost"],
+html[data-win95="on"] [data-component="button-v2"][data-variant="ghost"],
+html[data-win95="on"] [data-component="icon-button"],
+html[data-win95="on"] [data-component="icon-button-v2"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 1px solid transparent !important;
+  transition: none !important;
+}
+
+html[data-win95="on"] [data-component="button"][data-variant="ghost"]:hover:not(:disabled),
+html[data-win95="on"] [data-component="button-v2"][data-variant="ghost"]:hover:not(:disabled),
+html[data-win95="on"] [data-component="icon-button"]:hover:not(:disabled),
+html[data-win95="on"] [data-component="icon-button-v2"]:hover:not(:disabled) {
+  background: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out-thin) !important;
+}
+
+html[data-win95="on"] [data-component="button"][data-variant="ghost"]:active:not(:disabled),
+html[data-win95="on"] [data-component="button-v2"][data-variant="ghost"]:active:not(:disabled),
+html[data-win95="on"] [data-component="icon-button"]:active:not(:disabled),
+html[data-win95="on"] [data-component="icon-button-v2"]:active:not(:disabled),
+html[data-win95="on"] [data-component="icon-button"][aria-expanded="true"],
+html[data-win95="on"] [data-component="icon-button-v2"][aria-expanded="true"] {
+  background: var(--w95-highlight) !important;
+  box-shadow: var(--w95-bevel-in-thin) !important;
+}
+
+/* 3. Tabs (v1 & v2 & Review Panel & Terminal) -> Clean Classic Win95 Folder Tabs */
+html[data-win95="on"] [data-component="tabs-v2"] [data-slot="tabs-v2-list"],
+html[data-win95="on"] [data-component="tabs"] [role="tablist"],
+html[data-win95="on"] .session-review-v2-tabs-bar,
+html[data-win95="on"] .session-review-v2-tabs-bar > div,
+html[data-win95="on"] .session-review-v2-tabs-bar [role="tablist"] > div,
+html[data-win95="on"] .session-review-v2-sidebar-toggle-slot {
+  background: var(--w95-face) !important;
+}
+
+/* Kill ALL modern white blocks & horizontal fade gradients on sticky tab controls */
+html[data-win95="on"] #review-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky::before,
+html[data-win95="on"] #review-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky::after,
+html[data-win95="on"] #review-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky [data-component="icon-button-v2"]::after,
+html[data-win95="on"] #terminal-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky::before,
+html[data-win95="on"] #terminal-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky::after,
+html[data-win95="on"] #terminal-panel [data-component="tabs"] [data-slot="tabs-list"] > .sticky [data-component="icon-button-v2"]::after {
+  display: none !important;
+  content: none !important;
+}
+
+html[data-win95="on"] #review-panel [data-component="tabs"] [data-slot="tabs-list"],
+html[data-win95="on"] #terminal-panel [data-component="tabs"] [data-slot="tabs-list"] {
+  gap: 4px !important;
+  padding-inline: 6px !important;
+  height: 34px !important;
+  align-items: flex-end !important;
+}
+
+html[data-win95="on"] [data-component="tabs-v2"] [data-slot="tabs-v2-list"],
+html[data-win95="on"] [data-component="tabs"] [role="tablist"],
+html[data-win95="on"] .session-review-v2-tabs-bar {
+  border-bottom: 1px solid var(--w95-shadow) !important;
+}
+
+html[data-win95="on"] .session-review-v2-sidebar-toggle-slot {
+  border-bottom: 0 !important;
+  padding: 0 2px !important;
+  height: 32px !important;
+}
+
+html[data-win95="on"] [data-component="tabs"] [data-slot="tabs-trigger-wrapper"] {
+  background: transparent !important;
+  border: 0 !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+}
+
+html[data-win95="on"] [data-component="tabs-v2"] [data-slot="tabs-v2-trigger-wrapper"],
+html[data-win95="on"] [data-component="tabs"] [role="tab"] {
+  background: var(--w95-face) !important;
+  box-shadow: inset 1px 1px var(--w95-light), inset 2px 2px var(--w95-highlight), inset -1px 0 var(--w95-dark), inset -2px 0 var(--w95-shadow) !important;
+  border: 0 !important;
+  padding: 4px 16px !important;
+  min-width: 64px !important;
+  height: 26px !important;
+  margin-top: 2px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+html[data-win95="on"] [data-component="tabs-v2"] [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]),
+html[data-win95="on"] [data-component="tabs"] [role="tab"][aria-selected="true"],
+html[data-win95="on"] [data-component="tabs"] [role="tab"][data-selected] {
+  background: var(--w95-window-bg) !important;
+  color: var(--w95-text) !important;
+  font-weight: 700 !important;
+  height: 28px !important;
+  margin-top: 0 !important;
+}
+
+/* 4. Inputs, Textareas, Select boxes, Prompt Composer -> Single Clean Sunken White Win95 Edit Fields */
+html[data-win95="on"] [data-component="input"] [data-slot="input-wrapper"],
+html[data-win95="on"] [data-slot="text-input-v2-value"],
+html[data-win95="on"] [data-component="select"] button,
+html[data-win95="on"] [data-component="select-v2"] button,
+html[data-win95="on"] #root textarea {
+  background: var(--w95-window-bg) !important;
+  color: var(--w95-text) !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: var(--w95-bevel-in) !important;
+}
+
+html[data-win95="on"] [data-component="input"] [data-slot="input-wrapper"]:focus-within,
+html[data-win95="on"] [data-slot="text-input-v2-value"]:focus-within,
+html[data-win95="on"] #root input:focus,
+html[data-win95="on"] #root textarea:focus {
+  outline: none !important;
+}
+
+/* Bare inputs NOT inside a styled input wrapper (wrapped in :where for 0 specificity) */
+:where(html[data-win95="on"] #root input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+  background: var(--w95-window-bg);
+  color: var(--w95-text);
+  border: 0;
+  outline: none;
+  box-shadow: var(--w95-bevel-in);
+}
+
+/* Avoid double bevel when input is inside text-input-v2-value or input-wrapper */
+html[data-win95="on"] #root [data-slot="text-input-v2-value"] input,
+html[data-win95="on"] #root [data-slot="input-wrapper"] input,
+html[data-win95="on"] #root [data-component="text-input-v2"] input,
+html[data-win95="on"] [data-slot="text-input-v2-value"] input,
+html[data-win95="on"] [data-slot="input-wrapper"] input {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+}
+
+html[data-win95="on"] [data-component="text-input-v2"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Prompt composer box (contenteditable & wrapper) */
+html[data-win95="on"] #root form:has([contenteditable="true"]),
+html[data-win95="on"] [data-component="dock-prompt"] {
+  background: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  border: 0 !important;
+  padding: 6px !important;
+}
+
+html[data-win95="on"] #root [contenteditable="true"] {
+  background: var(--w95-window-bg) !important;
+  color: var(--w95-text) !important;
+  box-shadow: var(--w95-bevel-in) !important;
+  padding: 6px 8px !important;
+}
+
+/* 5. CRITICAL Z-INDEX GUARANTEE: Scrim strictly BELOW Dialog Content, and BOTH strictly ABOVE Win95 Windows! */
+html[data-win95="on"] [data-component="dialog-overlay"] {
+  z-index: 9640 !important;
+}
+
+html[data-win95="on"] [data-component="dialog-overlay"] + div,
+html[data-win95="on"] [data-component="dialog"],
+html[data-win95="on"] [data-component="dialog-v2"],
+html[data-win95="on"] [data-component="popover-content"],
+html[data-win95="on"] [data-component="dropdown-menu-content"],
+html[data-win95="on"] [data-component="dropdown-menu-sub-content"],
+html[data-win95="on"] [data-component="context-menu-content"],
+html[data-win95="on"] [data-component="context-menu-sub-content"],
+html[data-win95="on"] [data-component="menu-v2-content"],
+html[data-win95="on"] [data-component="select-content"],
+html[data-win95="on"] [data-component="hover-card-content"],
+html[data-win95="on"] [data-component="tooltip"],
+html[data-win95="on"] [data-component="tooltip-v2"],
+html[data-win95="on"] [data-component="toast-region"] {
+  z-index: 9660 !important;
+}
+
+/* Settings v2 sticky header — remove modern soft fade gradient */
+html[data-win95="on"] .settings-v2-tab-header {
+  background: var(--w95-face) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--w95-shadow) !important;
+  box-shadow: inset 0 -1px var(--w95-light) !important;
+}
+
+/* Dialogs, Command Palette, Popovers, Context Menus, Dropdowns -> Classic Win95 Windows & Menus */
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-content"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-container"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-content"] {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  border: 0 !important;
+  box-shadow: var(--w95-bevel-out), 3px 3px 0 rgba(0, 0, 0, 0.5) !important;
+  padding: 3px !important;
+}
+
+/* Authentic solid Windows 95 #000080 dialog titlebars (buttons inside keep crisp black text!) */
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-header"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-header"] {
+  background: var(--w95-title-active) !important;
+  color: var(--w95-title-active-text) !important;
+  padding: 5px 8px !important;
+  min-height: 24px !important;
+  gap: 8px !important;
+  border-bottom: 0 !important;
+}
+
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-title"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-title"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-header-title"] {
+  color: var(--w95-title-active-text) !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-description"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-description"] {
+  color: #dfdfdf !important;
+  font-weight: 400 !important;
+  font-size: 11px !important;
+}
+
+/* Action buttons inside dialog-header (e.g. "+ Подключить провайдера") MUST have crisp black text on silver! */
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-header"] button,
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-header"] button *,
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-header"] button,
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-header"] button * {
+  color: var(--w95-text) !important;
+  font-weight: 400 !important;
+}
+
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-close-button"],
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-close-button"] {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  width: 18px !important;
+  height: 16px !important;
+  min-width: 18px !important;
+  min-height: 16px !important;
+  padding: 0 !important;
+}
+
+html[data-win95="on"] [data-component="dialog"] [data-slot="dialog-close-button"] *,
+html[data-win95="on"] [data-component="dialog-v2"] [data-slot="dialog-close-button"] * {
+  color: var(--w95-text) !important;
+}
+
+html[data-win95="on"] [data-component="dropdown-menu-content"],
+html[data-win95="on"] [data-component="dropdown-menu-sub-content"],
+html[data-win95="on"] [data-component="context-menu-content"],
+html[data-win95="on"] [data-component="context-menu-sub-content"],
+html[data-win95="on"] [data-component="menu-v2-content"],
+html[data-win95="on"] [data-component="popover-content"],
+html[data-win95="on"] [data-component="select-content"],
+html[data-win95="on"] [data-component="hover-card-content"] {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  border: 0 !important;
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.4) !important;
+  padding: 3px !important;
+}
+
+html[data-win95="on"] [data-slot="dropdown-menu-item"]:hover,
+html[data-win95="on"] [data-slot="dropdown-menu-item"][data-highlighted],
+html[data-win95="on"] [data-slot="context-menu-item"]:hover,
+html[data-win95="on"] [data-slot="context-menu-item"][data-highlighted],
+html[data-win95="on"] [data-component="menu-v2-item"]:hover,
+html[data-win95="on"] [data-component="menu-v2-item"][data-highlighted] {
+  background: var(--w95-selection-bg) !important;
+  color: var(--w95-selection-text) !important;
+}
+
+html[data-win95="on"] [data-slot="dropdown-menu-item"][data-highlighted] *,
+html[data-win95="on"] [data-slot="context-menu-item"][data-highlighted] *,
+html[data-win95="on"] [data-component="menu-v2-item"][data-highlighted] * {
+  color: var(--w95-selection-text) !important;
+}
+
+/* 6. Tooltips -> Classic Pale Yellow Win95 Tooltip (#ffffe1 + 1px black border) */
+html[data-win95="on"] [data-component="tooltip"],
+html[data-win95="on"] [data-component="tooltip-v2"] {
+  background: var(--w95-tooltip-bg) !important;
+  color: var(--w95-tooltip-text) !important;
+  border: 1px solid #000000 !important;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35) !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+}
+
+html[data-win95="on"] [data-component="tooltip"] *,
+html[data-win95="on"] [data-component="tooltip-v2"] * {
+  color: var(--w95-tooltip-text) !important;
+}
+
+/* 7. Home Explorer Lists (Projects & Recent Sessions) -> Win95 Navy Highlight */
+html[data-win95="on"] [data-component="home-session-row"]:hover,
+html[data-win95="on"] [data-component="home-session-row"]:focus-visible {
+  background: var(--w95-selection-bg) !important;
+  color: var(--w95-selection-text) !important;
+}
+
+html[data-win95="on"] [data-component="home-session-row"]:hover *,
+html[data-win95="on"] [data-component="home-session-row"]:focus-visible * {
+  color: var(--w95-selection-text) !important;
+}
+
+/* 8. Cards, Tool Calls, Messages, Code Blocks, Checkboxes, Switches, Keybinds, Toasts */
+html[data-win95="on"] [data-component="card"],
+html[data-win95="on"] [data-component="task-tool-card"],
+html[data-win95="on"] [data-component="attachment-card-v2"],
+html[data-win95="on"] [data-component="tool-part-wrapper"],
+html[data-win95="on"] [data-component="settings-v2-list"] {
+  background: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  border: 0 !important;
+}
+
+/* User message bubble (style only the actual text bubble, not the full-width wrapper!) */
+html[data-win95="on"] [data-component="user-message"] [data-slot="user-message-text"] {
+  background: #e6eefc !important;
+  color: #000000 !important;
+  box-shadow: var(--w95-bevel-out-thin) !important;
+  border: 1px solid #000080 !important;
+  padding: 6px 10px !important;
+}
+
+html[data-win95="on"][data-win95-scheme="hc-dark"] [data-component="user-message"] [data-slot="user-message-text"] {
+  background: #000050 !important;
+  color: #ffffff !important;
+  border-color: #55ffff !important;
+}
+
+html[data-win95="on"] [data-component="markdown-code"],
+html[data-win95="on"] [data-component="code"],
+html[data-win95="on"] [data-component="bash-output"],
+html[data-win95="on"] [data-component="diff"] {
+  background: var(--w95-code-bg) !important;
+  box-shadow: var(--w95-bevel-in) !important;
+  border: 0 !important;
+}
+
+html[data-win95="on"] [data-component="bash-output"] [data-slot="bash-pre"] {
+  background: #000000 !important;
+  color: #c0c0c0 !important;
+  padding: 8px !important;
+}
+
+html[data-win95="on"] [data-component="checkbox"] [data-slot="checkbox-checkbox-control"] {
+  background: var(--w95-window-bg) !important;
+  box-shadow: var(--w95-bevel-in) !important;
+  border: 0 !important;
+}
+
+html[data-win95="on"] [data-component="switch"] {
+  box-shadow: var(--w95-bevel-in) !important;
+  background: var(--w95-face) !important;
+  border: 0 !important;
+}
+
+html[data-win95="on"] [data-component="keybind"],
+html[data-win95="on"] [data-component="keybind-v2"] [data-slot="keybind-v2-key"],
+html[data-win95="on"] [data-component="tag"] {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  box-shadow: var(--w95-bevel-out-thin) !important;
+  border: 0 !important;
+}
+
+html[data-win95="on"] [data-component="toast"] {
+  background: var(--w95-tooltip-bg) !important;
+  color: var(--w95-tooltip-text) !important;
+  border: 1px solid #000000 !important;
+  box-shadow: var(--w95-bevel-out), 2px 2px 0 rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-win95="on"] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:hover,
+html[data-win95="on"] [data-component="filetree"] a:hover {
+  background: var(--w95-selection-bg) !important;
+  color: var(--w95-selection-text) !important;
+}
+
+html[data-win95="on"] [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:hover * {
+  color: var(--w95-selection-text) !important;
+}
+
+/* 9. Resize handles inside OpenCode -> Classic Win95 bevel splitters */
+html[data-win95="on"] [data-component="resize-handle"] {
+  background: var(--w95-face) !important;
+  border-left: 1px solid var(--w95-light) !important;
+  border-right: 1px solid var(--w95-shadow) !important;
+}
+
+/* Focus rings in the desktop chrome and app. */
+html[data-win95="on"] :is(#win95-host-bar, #win95-main-menubar, #win95-start-menu, #win95-taskbar) button:focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: -3px;
+}
+
+
+html[data-win95="on"] #root button:focus-visible,
+html[data-win95="on"] #root a:focus-visible {
+  outline: 1px dotted var(--w95-dark) !important;
+  outline-offset: -3px !important;
+}
+
+/* 11. Crisp pixel-art images/SVGs in our shell */
+.w95-pixel {
+  image-rendering: pixelated;
+}
+
+@media (max-width: 460px) {
+  .w95-start-submenu {
+    --w95-submenu-left: 20px;
+    --w95-submenu-top: 100% - 2px;
+    min-width: min(180px, calc(100vw - 8px));
+  }
+
+  .w95-start-subitem {
+    white-space: normal;
+  }
+}
