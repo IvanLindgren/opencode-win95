@@ -9,6 +9,7 @@
 
     var html = document.documentElement
     html.dataset.win95 = enabled ? "on" : "off"
+    html.dataset.win95Sounds = localStorage.getItem("opencode-win95-sounds") === "false" ? "off" : "on"
     html.dataset.win95Wallpaper = wallpaper
     html.dataset.win95Scheme = scheme
     html.dataset.win95Cursor = cursorOn ? "on" : "off"

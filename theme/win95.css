@@ -2102,11 +2102,44 @@ html[data-win95="on"] [data-component="home-session-row"]:focus-visible * {
 html[data-win95="on"] [data-component="card"],
 html[data-win95="on"] [data-component="task-tool-card"],
 html[data-win95="on"] [data-component="attachment-card-v2"],
-html[data-win95="on"] [data-component="tool-part-wrapper"],
 html[data-win95="on"] [data-component="settings-v2-list"] {
   background: var(--w95-face) !important;
   box-shadow: var(--w95-bevel-out) !important;
   border: 0 !important;
+}
+
+/* Tool call cards (Patch, Edit, Write, Read, Bash, etc.): crisp inner padding so text never touches the 3D bevel */
+html[data-win95="on"] [data-component="tool-part-wrapper"] {
+  background: var(--w95-face) !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  border: 0 !important;
+  padding: 3px 8px !important;
+  box-sizing: border-box !important;
+}
+
+html[data-win95="on"] [data-component="tool-part-wrapper"] [data-slot="collapsible-trigger"],
+html[data-win95="on"] [data-component="tool-part-wrapper"] [data-slot="accordion-trigger"] {
+  padding-inline: 4px !important;
+  background-color: transparent !important;
+  box-sizing: border-box !important;
+}
+
+html[data-win95="on"] :is([data-component="edit-tool"], [data-component="write-tool"], [data-component="apply-patch-tool"]) > [data-component="collapsible"] > [data-slot="collapsible-trigger"][aria-expanded="true"] {
+  background-color: var(--w95-face) !important;
+  padding-inline: 4px !important;
+}
+
+/* Disable modern smooth scroll-fade gradients that wash out crisp Win95 borders */
+html[data-win95="on"] #root [class*="bg-[linear-gradient(to_bottom,"],
+html[data-win95="on"] #root [class*="bg-[linear-gradient(to_top,"],
+html[data-win95="on"] #root [class*="bg-[linear-gradient(to_left,"],
+html[data-win95="on"] #root [class*="bg-[linear-gradient(to_right,"],
+html[data-win95="on"] #root [data-slot="home-projects-scroll"]::before,
+html[data-win95="on"] #root [data-slot="home-projects-scroll"]::after,
+html[data-win95="on"] #root [data-slot="manage-models-scroll"]::before,
+html[data-win95="on"] #root [data-slot="manage-models-scroll"]::after {
+  background-image: none !important;
+  background: transparent !important;
 }
 
 /* User message bubble (style only the actual text bubble, not the full-width wrapper!) */

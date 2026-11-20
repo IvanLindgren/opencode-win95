@@ -195,6 +195,7 @@ class OpenCode95Desktop {
   applyStateToDom() {
     const html = document.documentElement
     html.dataset.win95 = this.state.enabled ? "on" : "off"
+    html.dataset.win95Sounds = this.state.sounds ? "on" : "off"
     html.dataset.win95Wallpaper = this.state.wallpaper
     html.dataset.win95Scheme = this.state.colorScheme
     html.dataset.win95Cursor = this.state.retroCursor ? "on" : "off"

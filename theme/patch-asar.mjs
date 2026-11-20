@@ -266,11 +266,67 @@ indexHtml = replaceOnce(
   "renderer/index.html-body"
 )
 
-// 6. Append patched file buffers cleanly & update header entries
+// 6. Route OpenCode's notification audio through the Win95 sound scheme.
+const rendererScript = indexHtml.match(/\bsrc="\.\/(assets\/main-[\w-]+\.js)"/)
+if (!rendererScript) throw new Error("OpenCode renderer entry not found")
+const rendererPath = `out/renderer/${rendererScript[1]}`
+let rendererJs = readEntryText(rendererPath)
+rendererJs = replaceOnce(
+  rendererJs,
+  `function playSoundById(id2) {
+  return soundSrc(id2).then((src) => playSound(src));
+}`,
+  `function win95NotificationMode() {
+  return document.documentElement.dataset.win95 === "on";
+}
+async function playSoundById(id2, event) {
+  if (!win95NotificationMode()) return soundSrc(id2).then((src) => playSound(src));
+  if (document.documentElement.dataset.win95Sounds === "off" || !id2 || id2 === "none") return;
+  // Event cues have fixed meanings. Sound-picker previews still follow the chosen sound family.
+  const cue = event === "complete" ? "chimes"
+    : event === "prompt" ? "ding"
+    : event === "error" ? "chord"
+    : id2 === "staplebops-02" || /^(alert|bip-bop)-/.test(id2) ? "ding"
+    : id2.startsWith("nope-") ? "chord" : "chimes";
+  return playSound("/win95/sounds/" + cue + ".wav");
+}`,
+  "renderer/Win95 sound playback"
+)
+for (const [setting, event] of Object.entries({ agent: "complete", permissions: "prompt", errors: "error" })) {
+  rendererJs = replaceOnce(
+    rendererJs,
+    `playSoundById(settings.sounds.${setting}())`,
+    `playSoundById(settings.sounds.${setting}(), "${event}")`,
+    `renderer/${setting} sound`
+  )
+}
+rendererJs = replaceOnce(
+  rendererJs,
+  `      if (e2.details.type === "question.asked") {
+        if (settings.notifications.agent())`,
+  `      if (e2.details.type === "question.asked") {
+        if (win95NotificationMode() && settings.sounds.permissionsEnabled()) {
+          void playSoundById(settings.sounds.permissions(), "prompt");
+        }
+        if (settings.notifications.agent())`,
+  "renderer/question sound"
+)
+rendererJs = replaceOnce(
+  rendererJs,
+  `      const notification = new Notification(title, {
+        body: description ?? "",`,
+  `      const notification = new Notification(title, {
+        ...(win95NotificationMode() ? { silent: true } : {}),
+        body: description ?? "",`,
+  "renderer/silent Windows toast in Win95 mode"
+)
+
+// 7. Append patched file buffers cleanly & update header entries
 const replacements = [
   { relPath: "out/main/index.js", buf: Buffer.from(mainJs, "utf8") },
   { relPath: "out/preload/index.js", buf: Buffer.from(preloadJs, "utf8") },
-  { relPath: "out/renderer/index.html", buf: Buffer.from(indexHtml, "utf8") }
+  { relPath: "out/renderer/index.html", buf: Buffer.from(indexHtml, "utf8") },
+  { relPath: rendererPath, buf: Buffer.from(rendererJs, "utf8") }
 ]
 
 let nextOffset = oldPayloadSize
