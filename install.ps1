@@ -11,27 +11,22 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
-if (-not (Test-Path $AsarPath)) {
+if (-not (Test-Path -LiteralPath $AsarPath -PathType Leaf)) {
   Write-Error "OpenCode Desktop app.asar not found at: $AsarPath`nPass custom path with: .\install.ps1 -AsarPath 'C:\path\to\app.asar'"
   exit 1
 }
+$AsarPath = (Resolve-Path -LiteralPath $AsarPath).ProviderPath
 
 $themeSrc = Join-Path $PSScriptRoot "theme"
 $themeDst = Join-Path $env:USERPROFILE ".config\opencode\win95-theme"
-$stateDst = Join-Path $themeDst "state.json"
-$hadState = Test-Path $stateDst
-$savedState = if ($hadState) { Get-Content -Path $stateDst -Raw } else { $null }
-
-# Stop any previous guard process before overwriting scripts
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -like '*win95-guard.ps1*' } |
-  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+. (Join-Path $themeSrc "stop-win95-guard.ps1")
+Stop-Win95Guard -ThemePath $themeDst
 
 New-Item -ItemType Directory -Force -Path $themeDst | Out-Null
-Copy-Item -Path (Join-Path $themeSrc "*") -Destination $themeDst -Recurse -Force
-
-if ($hadState -and $savedState) {
-  Set-Content -Path $stateDst -Value $savedState -Encoding UTF8 -NoNewline
+foreach ($item in (Get-ChildItem -LiteralPath $themeSrc)) {
+  if ($item.Name -eq "guard.log") { continue }
+  if ($item.Name -eq "state.json" -and (Test-Path -LiteralPath (Join-Path $themeDst "state.json"))) { continue }
+  Copy-Item -LiteralPath $item.FullName -Destination $themeDst -Recurse -Force
 }
 
 # Optional: disable OpenCode auto-updater feed
@@ -47,18 +42,23 @@ if ($BlockAutoUpdate) {
 
 # Patch current app.asar and repair Desktop/Start Menu shortcuts
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $themeDst "ensure-patched.ps1") -AsarPath $AsarPath -Force -RepairShortcuts -RelaunchIfRunning
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Install auto-start update guard (survives future OpenCode updates automatically)
 $startupVbs = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup\OpenCodeWin95Guard.vbs"
-if (-not $NoGuard) {
-  $guardPs1 = Join-Path $themeDst "win95-guard.ps1"
+if ($NoGuard) {
+  if (Test-Path -LiteralPath $startupVbs) { Remove-Item -LiteralPath $startupVbs }
+} else {
+  $guardVbs = Join-Path $themeDst "win95-guard.vbs"
+  $wscript = "$env:SystemRoot\System32\wscript.exe"
   $vbsContent = @"
 Set shell = CreateObject("WScript.Shell")
-cmd = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""$guardPs1"" -AsarPath ""$AsarPath"""
+cmd = """$wscript"" ""$guardVbs"" ""$AsarPath"""
 shell.Run cmd, 0, False
 "@
-  Set-Content -Path $startupVbs -Value $vbsContent -Encoding ASCII
-  Start-Process -FilePath "$env:SystemRoot\System32\wscript.exe" -ArgumentList "`"$startupVbs`""
+  New-Item -ItemType Directory -Force -Path (Split-Path $startupVbs -Parent) | Out-Null
+  Set-Content -LiteralPath $startupVbs -Value $vbsContent -Encoding Unicode
+  Start-Process -FilePath $wscript -ArgumentList "`"$startupVbs`""
   Write-Host "Update guard installed and started (Startup: $startupVbs)." -ForegroundColor Cyan
 }
 

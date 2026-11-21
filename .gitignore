@@ -3,3 +3,5 @@ Thumbs.db
 *.bak
 *.tmp
 *.log
+/theme/win95-guard*.exe
+/theme/win95-guard*.exe.backup

@@ -32,10 +32,10 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 What `install.ps1` does:
 1. Copies the theme files, fonts, and sounds to `%USERPROFILE%\.config\opencode\win95-theme\`.
 2. Backs up the original `app.asar` to `app.asar.bak`.
-3. Patches `app.asar` to load the local theme folder and route OpenCode notification audio to Win95 WAVs.
+3. Patches `app.asar` to load the local theme folder. The theme routes OpenCode notification audio to the bundled Win95 WAVs, including embedded OpenCode sounds.
 4. Installs automatic update protection:
    - Updates Desktop and Start Menu `OpenCode` shortcuts to check and re-patch `app.asar` automatically before launch (~15 ms when already patched).
-   - Starts a background `FileSystemWatcher` guard (added to Windows Startup, 0% idle CPU) that detects when an OpenCode update overwrites `app.asar`, automatically re-patches the new version, repairs shortcuts, and relaunches OpenCode in Win95 mode.
+   - Adds a background guard to Windows Startup. It checks `app.asar` once at startup and again only when the archive changes. After an OpenCode update, it re-patches the archive, repairs shortcuts, and relaunches OpenCode in Win95 mode.
 
 Optional flags:
 
@@ -50,12 +50,28 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -NoGuard
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -BlockAutoUpdate
 ```
 
+### Optional: build the smaller native guard
+
+The installer uses the Node.js guard unless `win95-guard.exe` is available. To use the native Windows watcher, build it with MinGW-w64 GCC on `PATH`, then run `install.ps1` again. Node.js is still needed to check and patch the archive.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\theme\build-win95-guard.ps1
+```
+
 ## Controls
 
 - `Settings -> Appearance -> Theme` (`Windows 95`), `Ctrl+Shift+9`, or the top bar / tray toggle button: switch between Win95 and any built-in OpenCode theme without restarting.
 - `Ctrl+Esc`: open the Start menu.
 - Right-click desktop or double-click `Display`: change wallpapers, color schemes, sounds, and pixel cursor.
 - `Ctrl+R`: reload the UI after editing files in `%USERPROFILE%\.config\opencode\win95-theme\`.
+
+The Win95 notification cues are Chimes for completion, Ding for permission and question prompts, and Chord for the default error sound. Turning Win95 sounds off mutes these cues; turning the theme off restores OpenCode's original sound behavior.
+
+## Tests
+
+On Windows, run `node tests/guard.test.mjs` to check guard startup, single-instance behavior, and repair dispatch. Run `node tests/guard-install.test.mjs` to check the Startup launcher and `-NoGuard`. Add `--native` to either command after building the native executable.
+
+Run `node --test tests/notification-audio.test.mjs` to check sound routing. To also test your installed OpenCode sound assets, set `OPENCODE_AUDIO_TEST_ASAR` to the path of `app.asar` first. These tests don't modify the installation.
 
 ## Uninstall
 

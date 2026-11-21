@@ -11,9 +11,8 @@ $startupVbs = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Star
 if (Test-Path $startupVbs) {
   Remove-Item -Path $startupVbs -Force -ErrorAction SilentlyContinue
 }
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -like '*win95-guard.ps1*' } |
-  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+. (Join-Path $PSScriptRoot "stop-win95-guard.ps1")
+Stop-Win95Guard -ThemePath $PSScriptRoot
 
 # 2. Restore original OpenCode shortcuts
 try {

@@ -89,28 +89,68 @@
     }
   } catch (e) {}
 
-  // Zero-patch Win95 notification audio router (works on OpenCode 1.x, 2.x, and future builds)
+  // Route OpenCode notification clips without modifying the app's renderer bundle.
   try {
     var NativeAudio = window.Audio
     if (typeof NativeAudio === "function") {
+      // Small Vite assets are data URLs with no filename. Match the known
+      // OpenCode 2.3.2 clips by URL length and FNV-1a hash, not by MIME type alone.
+      // Keep only fingerprints, not another copy of the app's audio.
+      var inlineSounds = {
+        2162: { "550b5916": "alert-03" },
+        2370: { "5e46a24": "nope-01" },
+        2522: { "654234f7": "nope-04" },
+        2818: { "7cb0ed39": "nope-07" },
+        3094: { "8ba34523": "nope-10" },
+        3774: { "c419db09": "nope-06" },
+        3862: { "de15d0ca": "yup-06" },
+        4014: { "78c2d9d": "nope-09" },
+        4110: { "962545d1": "bip-bop-01" },
+        4298: { "a92918ed": "bip-bop-10" },
+        4638: { "8a7351dc": "staplebops-05" },
+        4746: { "aca8dad7": "staplebops-02" },
+        5046: { "ba1f5019": "nope-03", "cade1470": "yup-02" },
+        5130: { "87fe2853": "bip-bop-05" },
+        5138: { "69458e55": "alert-09" },
+        5206: { "a1f80d84": "staplebops-01" },
+        5370: { "4c5b5951": "bip-bop-02" },
+        5406: { "9672f78": "bip-bop-07" },
+      }
+      var namedSound = /(?:^|\/)((?:alert|bip-bop|staplebops|nope|yup)-\d+)(?:-[\w-]+)?\.(?:aac|m4a|mp3|ogg|wav)$/i
+
+      function notificationId(src) {
+        if (src.startsWith("win95://") || src.indexOf("/win95/") !== -1) return
+        if (src.startsWith("data:")) {
+          var matches = inlineSounds[src.length]
+          if (!matches || !src.startsWith("data:audio/")) return
+          var hash = 2166136261
+          for (var i = 0; i < src.length; i++) {
+            hash = Math.imul(hash ^ src.charCodeAt(i), 16777619)
+          }
+          return matches[(hash >>> 0).toString(16)]
+        }
+        var suffix = src.search(/[?#]/)
+        var match = namedSound.exec(suffix === -1 ? src : src.slice(0, suffix))
+        return match && match[1].toLowerCase()
+      }
+
       function Win95Audio(src) {
         var resolved = src
         try {
-          var s = typeof src === "string" ? src : src ? String(src) : ""
-          var isWin95On = document.documentElement.dataset.win95 === "on"
-          if (isWin95On && s && s.indexOf("win95://") !== 0 && s.indexOf("/win95/") === -1) {
-            var m = s.match(/(?:^|\/)(alert|bip-bop|staplebops|nope|yup)-[\w-]+/i)
-            if (m) {
-              if (document.documentElement.dataset.win95Sounds === "off") {
+          var state = document.documentElement.dataset
+          if (state.win95 === "on" && src) {
+            var id = notificationId(String(src))
+            if (id) {
+              if (state.win95Sounds === "off") {
                 var muted = new NativeAudio()
                 muted.play = function () { return Promise.resolve() }
                 return muted
               }
-              var family = m[1].toLowerCase()
               var cue =
-                family === "nope"
+                id.startsWith("nope-")
                   ? "chord"
-                  : family === "alert" || family === "bip-bop" || /staplebops-02/i.test(s)
+                  : id.startsWith("alert-") || id.startsWith("bip-bop-") ||
+                    id === "staplebops-02" || id === "staplebops-05"
                     ? "ding"
                     : "chimes"
               resolved = "win95://theme/sounds/" + cue + ".wav"

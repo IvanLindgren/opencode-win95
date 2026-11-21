@@ -45,6 +45,15 @@ const WELCOME_TIPS = [
   "Попробуйте меню «Start → Run...» (или нажмите Win95-меню) и введите команды: dos, desk.cpl, sysdm.cpl, control, new, normal или devtools!"
 ]
 
+const EXTRA_WINDOWS = {
+  welcome: "buildWelcomeWindow",
+  display: "buildDisplayPropertiesWindow",
+  sysprop: "buildSystemPropertiesWindow",
+  recycle: "buildRecycleBinWindow",
+  run: "buildRunWindow",
+  shutdown: "buildShutdownWindow"
+}
+
 // Tiny crisp SVG glyphs for window buttons
 const CAP_MIN_SVG = `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><rect x="1" y="7" width="7" height="2" fill="currentColor"/></svg>`
 const CAP_MAX_SVG = `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><rect x="1" y="1" width="8" height="2" fill="currentColor"/><rect x="1" y="1" width="1" height="8" fill="currentColor"/><rect x="8" y="1" width="1" height="8" fill="currentColor"/><rect x="1" y="8" width="8" height="1" fill="currentColor"/></svg>`
@@ -73,6 +82,7 @@ class OpenCode95Desktop {
     this.state = { ...DEFAULT_STATE }
     this.zOrder = ["opencode"]
     this.windows = new Map() // id -> { id, title, icon, el, minimized, open }
+    this.dialogPositions = new Map()
     this.activeWindowId = "opencode"
     this.tipIndex = 0
     this.sysInfo = { version: "1.19.4", electron: "42", node: "24", arch: "x64", user: "User", platform: "win32" }
@@ -116,17 +126,15 @@ class OpenCode95Desktop {
 
     sounds.setEnabled(this.state.enabled && this.state.sounds)
 
-    this.buildShell()
+    this.buildNormalControls()
     this.registerGlobalEvents()
     this.hookNativeThemeSelect()
-    this.observeTitle()
-    this.startClock()
-    this.renderTaskbarWindows()
+    if (this.state.enabled) this.activateShell()
 
     // Show Welcome dialog on startup if enabled & Win95 active
     if (this.state.enabled && this.state.showWelcome) {
       setTimeout(() => {
-        if (this.state.enabled) this.openWindow("welcome")
+        if (this.state.enabled && !this.windows.has("welcome")) this.openWindow("welcome")
       }, 350)
     }
 
@@ -219,9 +227,25 @@ class OpenCode95Desktop {
     this.persistState({ enabled: next })
     this.closeAllMenus()
     if (next) {
-      this.applyMainWindowBounds()
+      this.activateShell()
       sounds.playStartup()
+    } else {
+      this.mouseGesture?.cancel()
+      this.stopClock()
+      this.titleObserver?.disconnect()
+      this.titleObserver = null
+      for (const id of this.windows.keys()) this.closeWindow(id)
+      this.startMenu?.remove()
+      this.contextMenu?.remove()
+      this.startMenu = this.contextMenu = null
     }
+  }
+
+  activateShell() {
+    if (!this.mainWindow) this.buildShell()
+    else this.applyMainWindowBounds()
+    this.observeTitle()
+    this.startClock()
   }
 
   triggerOpencodeCommand(cmd) {
@@ -268,11 +292,7 @@ class OpenCode95Desktop {
   // ==========================================================================
   // BUILD COMPLETE WINDOWS 95 DESKTOP SHELL
   // ==========================================================================
-  buildShell() {
-    const body = document.body
-    const root = document.getElementById("root")
-
-    // 1. Normal-mode top-right controls (shown ONLY when Win95 is toggled OFF)
+  buildNormalControls() {
     this.normalControls = el("div", { id: "win95-normal-controls" }, [
       el(
         "button",
@@ -290,9 +310,14 @@ class OpenCode95Desktop {
       el("button", { class: "w95-norm-winbtn", title: "Развернуть", text: "☐", onclick: () => this.runHostAction("window.toggleMaximize") }),
       el("button", { class: "w95-norm-winbtn close", title: "Закрыть", text: "✕", onclick: () => this.runHostAction("window.close") })
     ])
-    body.appendChild(this.normalControls)
+    document.body.appendChild(this.normalControls)
+  }
 
-    // 2. Slim top Electron Host Bar (for moving/snapping/closing Electron host window)
+  buildShell() {
+    const body = document.body
+    const root = document.getElementById("root")
+
+    // Slim top Electron Host Bar (for moving/snapping/closing Electron host window)
     this.hostMaxBtn = el("button", {
       class: "w95-cap-btn",
       title: "Развернуть окно приложения",
@@ -328,7 +353,7 @@ class OpenCode95Desktop {
     ])
     body.appendChild(this.hostBar)
 
-    // 3. Desktop Background Layer + Left Column Icons
+    // Desktop Background Layer + Left Column Icons
     this.desktopIconsEl = el("div", { id: "win95-desktop-icons" })
     this.desktopLayer = el(
       "div",
@@ -352,22 +377,10 @@ class OpenCode95Desktop {
     body.appendChild(this.desktopLayer)
     this.buildDesktopIcons()
 
-    // 4. Main Draggable/Resizable Windows 95 Application Window wrapping #root
+    // Main Draggable/Resizable Windows 95 Application Window wrapping #root
     this.buildMainWindow(root)
 
-    // 5. Extra Authentic Retro Floating Windows
-    this.buildWelcomeWindow()
-    this.buildDisplayPropertiesWindow()
-    this.buildSystemPropertiesWindow()
-    this.buildRecycleBinWindow()
-    this.buildRunWindow()
-    this.buildShutdownWindow()
-
-    // 6. Start Menu & Desktop Context Menu
-    this.buildStartMenu()
-    this.buildContextMenu()
-
-    // 7. Bottom Taskbar
+    // Bottom Taskbar; menus and satellite windows are built as requested.
     this.buildTaskbar()
   }
 
@@ -761,13 +774,15 @@ class OpenCode95Desktop {
     if (height) winEl.style.setProperty("--w95-dialog-height", `${height}px`)
     const w = { id, title, icon: icon || WIN95_ICONS.winFlag, el: winEl, open: false, minimized: false }
     this.makeDraggable(winEl, titlebar, () => true, ({ left, top }) => {
-      w.position = { left, top }
+      this.dialogPositions.set(id, { left, top })
     })
     document.body.appendChild(winEl)
     this.windows.set(id, w)
   }
 
   openWindow(id) {
+    if (!this.state.enabled) return
+    if (!this.windows.has(id) && Object.hasOwn(EXTRA_WINDOWS, id)) this[EXTRA_WINDOWS[id]]()
     const w = this.windows.get(id)
     if (!w) return
     this.closeAllMenus()
@@ -780,25 +795,27 @@ class OpenCode95Desktop {
     }
     this.focusWindow(id)
     if (id === "shutdown") sounds.play("ding")
-    this.renderTaskbarWindows()
   }
 
   positionExtraWindow(w) {
     const area = this.desktopLayer.getBoundingClientRect()
     const rect = w.el.getBoundingClientRect()
-    const left = w.position?.left ?? Math.round((area.width - rect.width) / 2)
-    const top = w.position?.top ?? Math.round(area.top + (area.height - rect.height) / 2)
+    const position = this.dialogPositions.get(w.id)
+    const left = position?.left ?? Math.round((area.width - rect.width) / 2)
+    const top = position?.top ?? Math.round(area.top + (area.height - rect.height) / 2)
     this.positionWindow(w.el, left, top)
   }
 
   closeWindow(id) {
     const w = this.windows.get(id)
     if (!w || id === "opencode") return
-    w.open = false
-    w.minimized = false
-    w.el.classList.remove("open", "minimized")
+    if (this.mouseGesture?.winEl === w.el) this.mouseGesture.cancel()
+    w.el.remove()
+    w.taskbarButton?.remove()
+    this.windows.delete(id)
+    this.zOrder = this.zOrder.filter((windowId) => windowId !== id)
+    if (id === "display") this.syncDisplayUI = null
     if (this.activeWindowId === id) this.focusTopWindow()
-    this.renderTaskbarWindows()
   }
 
   minimizeWindow(id) {
@@ -827,7 +844,6 @@ class OpenCode95Desktop {
     w.el.classList.remove("minimized")
     this.applyMainWindowBounds()
     this.focusWindow("opencode")
-    this.renderTaskbarWindows()
   }
 
   showDesktop() {
@@ -852,6 +868,10 @@ class OpenCode95Desktop {
   focusWindow(id) {
     const target = this.windows.get(id)
     if (!target || !target.open || target.minimized) return
+    if (this.activeWindowId === id) {
+      this.renderTaskbarWindows()
+      return
+    }
     this.activeWindowId = id
     this.zOrder = this.zOrder.filter((x) => x !== id)
     this.zOrder.push(id)
@@ -866,87 +886,62 @@ class OpenCode95Desktop {
     this.renderTaskbarWindows()
   }
 
-  makeDraggable(winEl, handleEl, canDrag = () => true, onDone = null) {
-    let dragging = false
-    let startX = 0
-    let startY = 0
-    let origLeft = 0
-    let origTop = 0
+  trackMouse(winEl, onMove, onDone) {
+    this.mouseGesture?.cancel()
+    const controller = new AbortController()
+    const options = { signal: controller.signal }
+    const cancel = () => {
+      controller.abort()
+      this.mouseGesture = null
+    }
+    const finish = () => {
+      cancel()
+      const r = winEl.getBoundingClientRect()
+      onDone({ left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) })
+    }
+    this.mouseGesture = { winEl, cancel }
+    window.addEventListener("mousemove", onMove, options)
+    window.addEventListener("mouseup", finish, options)
+    window.addEventListener("blur", finish, options)
+  }
 
+  makeDraggable(winEl, handleEl, canDrag, onDone) {
     handleEl.addEventListener("mousedown", (e) => {
       if (e.button !== 0 || e.target.closest("button")) return
       if (!canDrag()) return
-      dragging = true
-      startX = e.clientX
-      startY = e.clientY
-      const rect = winEl.getBoundingClientRect()
-      origLeft = rect.left
-      origTop = rect.top
+      const { clientX: startX, clientY: startY } = e
+      const { left, top } = winEl.getBoundingClientRect()
+      this.trackMouse(winEl, (move) => {
+        this.positionWindow(winEl, left + move.clientX - startX, top + move.clientY - startY)
+      }, onDone)
       e.preventDefault()
-    })
-
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return
-      const dx = e.clientX - startX
-      const dy = e.clientY - startY
-      this.positionWindow(winEl, origLeft + dx, origTop + dy)
-    })
-
-    window.addEventListener("mouseup", () => {
-      if (!dragging) return
-      dragging = false
-      if (onDone) {
-        const r = winEl.getBoundingClientRect()
-        onDone({ left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) })
-      }
     })
   }
 
   makeResizable(winEl, handleEl, dir) {
-    let resizing = false
-    let startX = 0
-    let startY = 0
-    let orig = null
-
     handleEl.addEventListener("mousedown", (e) => {
       if (e.button !== 0 || winEl.classList.contains("maximized")) return
-      resizing = true
-      startX = e.clientX
-      startY = e.clientY
-      orig = winEl.getBoundingClientRect()
+      const { clientX: startX, clientY: startY } = e
+      const orig = winEl.getBoundingClientRect()
+      this.trackMouse(winEl, (move) => {
+        const dx = move.clientX - startX
+        const dy = move.clientY - startY
+        const area = this.desktopLayer.getBoundingClientRect()
+        const minWidth = Math.min(520, area.width)
+        const minHeight = Math.min(360, area.height)
+        const left = dir.includes("w") ? clamp(orig.left + dx, area.left, orig.right - minWidth) : orig.left
+        const top = dir.includes("n") ? clamp(orig.top + dy, area.top, orig.bottom - minHeight) : orig.top
+        const right = dir.includes("e") ? clamp(orig.right + dx, left + minWidth, area.right) : orig.right
+        const bottom = dir.includes("s") ? clamp(orig.bottom + dy, top + minHeight, area.bottom) : orig.bottom
+        Object.assign(winEl.style, {
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(top)}px`,
+          width: `${Math.round(right - left)}px`,
+          height: `${Math.round(bottom - top)}px`
+        })
+      }, (bounds) => this.persistState({ windowBounds: bounds }))
       e.preventDefault()
       e.stopPropagation()
-    })
-
-    window.addEventListener("mousemove", (e) => {
-      if (!resizing || !orig) return
-      const dx = e.clientX - startX
-      const dy = e.clientY - startY
-      const area = this.desktopLayer.getBoundingClientRect()
-      const minWidth = Math.min(520, area.width)
-      const minHeight = Math.min(360, area.height)
-      const left = dir.includes("w") ? clamp(orig.left + dx, area.left, orig.right - minWidth) : orig.left
-      const top = dir.includes("n") ? clamp(orig.top + dy, area.top, orig.bottom - minHeight) : orig.top
-      const right = dir.includes("e") ? clamp(orig.right + dx, left + minWidth, area.right) : orig.right
-      const bottom = dir.includes("s") ? clamp(orig.bottom + dy, top + minHeight, area.bottom) : orig.bottom
-      const width = right - left
-      const height = bottom - top
-
-      Object.assign(winEl.style, {
-        left: `${Math.round(left)}px`,
-        top: `${Math.round(top)}px`,
-        width: `${Math.round(width)}px`,
-        height: `${Math.round(height)}px`
-      })
-    })
-
-    window.addEventListener("mouseup", () => {
-      if (!resizing) return
-      resizing = false
-      const r = winEl.getBoundingClientRect()
-      this.persistState({
-        windowBounds: { left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) }
-      })
     })
   }
 
@@ -954,7 +949,7 @@ class OpenCode95Desktop {
   // 1. WELCOME TO OPENCODE 95 DIALOG (Homage to Screenshot #1!)
   // ==========================================================================
   buildWelcomeWindow() {
-    const tipText = el("div", { text: WELCOME_TIPS[0], style: { fontSize: "11px", lineHeight: "1.45" } })
+    const tipText = el("div", { text: WELCOME_TIPS[this.tipIndex], style: { fontSize: "11px", lineHeight: "1.45" } })
     const showCheck = el("input", {
       type: "checkbox",
       id: "w95-welcome-chk",
@@ -1035,10 +1030,7 @@ class OpenCode95Desktop {
   // 2. DISPLAY PROPERTIES DIALOG (Wallpapers, Schemes, Sounds, Mode Toggle)
   // ==========================================================================
   buildDisplayPropertiesWindow() {
-    let draftWp = this.state.wallpaper
-    let draftScheme = this.state.colorScheme
-
-    const previewScreen = el("div", { class: "w95-crt-screen w95-wp-preview", "data-wp": draftWp }, [
+    const previewScreen = el("div", { class: "w95-crt-screen w95-wp-preview" }, [
       el("div", { class: "w95-crt-mini-win" }, [
         el("div", { class: "w95-crt-mini-bar" }),
         el("div", { class: "w95-crt-mini-body" })
@@ -1047,30 +1039,15 @@ class OpenCode95Desktop {
     ])
 
     const wpDesc = el("div", {
-      style: { fontSize: "11px", color: "var(--w95-text-muted)", marginTop: "6px" },
-      text: WALLPAPERS.find((w) => w.id === draftWp)?.desc || ""
+      style: { fontSize: "11px", color: "var(--w95-text-muted)", marginTop: "6px" }
     })
 
-    const wpList = el("div", { class: "w95-listbox" })
-    const renderWpList = () => {
-      wpList.innerHTML = ""
-      for (const wp of WALLPAPERS) {
-        const row = el("div", {
-          class: `w95-listbox-item${wp.id === draftWp ? " selected" : ""}`,
-          text: wp.name,
-          onclick: () => {
-            draftWp = wp.id
-            previewScreen.setAttribute("data-wp", draftWp)
-            wpDesc.textContent = wp.desc
-            renderWpList()
-            // Live instant apply so user sees the wallpaper change immediately!
-            this.persistState({ wallpaper: draftWp })
-          }
-        })
-        wpList.appendChild(row)
-      }
-    }
-    renderWpList()
+    const wpRows = WALLPAPERS.map((wp) => el("div", {
+      class: "w95-listbox-item",
+      text: wp.name,
+      onclick: () => this.persistState({ wallpaper: wp.id })
+    }))
+    const wpList = el("div", { class: "w95-listbox" }, wpRows)
 
     const tabBackground = el("div", {}, [
       el("div", { class: "w95-crt-preview-wrap" }, [
@@ -1083,24 +1060,12 @@ class OpenCode95Desktop {
       ])
     ])
 
-    const schemeList = el("div", { class: "w95-listbox", style: { height: "110px" } })
-    const renderSchemeList = () => {
-      schemeList.innerHTML = ""
-      for (const sc of SCHEMES) {
-        schemeList.appendChild(
-          el("div", {
-            class: `w95-listbox-item${sc.id === draftScheme ? " selected" : ""}`,
-            text: sc.name,
-            onclick: () => {
-              draftScheme = sc.id
-              renderSchemeList()
-              this.persistState({ colorScheme: draftScheme })
-            }
-          })
-        )
-      }
-    }
-    renderSchemeList()
+    const schemeRows = SCHEMES.map((sc) => el("div", {
+      class: "w95-listbox-item",
+      text: sc.name,
+      onclick: () => this.persistState({ colorScheme: sc.id })
+    }))
+    const schemeList = el("div", { class: "w95-listbox", style: { height: "110px" } }, schemeRows)
 
     const tabAppearance = el("div", { style: { display: "none" } }, [
       el("fieldset", { class: "w95-fieldset" }, [
@@ -1244,16 +1209,16 @@ class OpenCode95Desktop {
     ])
 
     this.syncDisplayUI = () => {
-      draftWp = this.state.wallpaper
-      draftScheme = this.state.colorScheme
-      previewScreen.setAttribute("data-wp", draftWp)
-      wpDesc.textContent = WALLPAPERS.find((w) => w.id === draftWp)?.desc || ""
+      const { wallpaper, colorScheme } = this.state
+      previewScreen.setAttribute("data-wp", wallpaper)
+      wpDesc.textContent = WALLPAPERS.find((w) => w.id === wallpaper)?.desc || ""
       chkSounds.checked = this.state.sounds
       chkCursor.checked = this.state.retroCursor
       chkWelcome.checked = this.state.showWelcome
-      renderWpList()
-      renderSchemeList()
+      wpRows.forEach((row, i) => row.classList.toggle("selected", WALLPAPERS[i].id === wallpaper))
+      schemeRows.forEach((row, i) => row.classList.toggle("selected", SCHEMES[i].id === colorScheme))
     }
+    this.syncDisplayUI()
 
     this.createExtraWindow({
       id: "display",
@@ -1395,16 +1360,18 @@ class OpenCode95Desktop {
       class: "w95-input",
       placeholder: "opencode, dos, desk.cpl, sysdm.cpl, control, new, normal...",
       style: { flex: "1", width: "100%" },
+      oninput: () => { this.runDraft = input.value },
       onkeydown: (e) => {
         if (e.key === "Enter") executeRun()
         if (e.key === "Escape") this.closeWindow("run")
       }
     })
+    input.value = this.runDraft ?? ""
 
     const executeRun = () => {
       const cmd = input.value.trim().toLowerCase()
+      this.runDraft = ""
       this.closeWindow("run")
-      input.value = ""
       if (!cmd || cmd === "opencode") this.restoreAndFocusMain()
       else if (cmd === "dos" || cmd === "cmd" || cmd === "terminal") this.triggerOpencodeCommand("terminal.toggle")
       else if (cmd === "desk.cpl" || cmd === "display" || cmd === "wallpaper") this.openWindow("display")
@@ -1451,7 +1418,7 @@ class OpenCode95Desktop {
   // 6. CLASSIC WIN95 SHUT DOWN DIALOG
   // ==========================================================================
   buildShutdownWindow() {
-    let choice = "exit"
+    let choice = this.shutdownChoice ?? "exit"
     const opts = [
       { id: "exit", label: "Shut down OpenCode (Закрыть приложение)" },
       { id: "restart", label: "Restart OpenCode (Перезапустить)" },
@@ -1466,10 +1433,10 @@ class OpenCode95Desktop {
         name: "w95-shutdown-choice",
         value: o.id,
         onchange: () => {
-          choice = o.id
+          this.shutdownChoice = choice = o.id
         }
       })
-      if (o.id === "exit") inp.checked = true
+      inp.checked = o.id === choice
       radioGroup.appendChild(
         el("label", { style: { display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" } }, [inp, o.label])
       )
@@ -1699,6 +1666,7 @@ class OpenCode95Desktop {
 
   openContextMenu(x, y) {
     this.closeAllMenus()
+    if (!this.contextMenu) this.buildContextMenu()
     this.contextMenu.classList.add("open")
     this.positionWindow(this.contextMenu, x, y)
   }
@@ -1716,7 +1684,7 @@ class OpenCode95Desktop {
         "aria-expanded": "false",
         onclick: (e) => {
           e.stopPropagation()
-          const isOpen = this.startMenu.classList.contains("open")
+          const isOpen = this.startMenu?.classList.contains("open")
           this.closeAllMenus()
           if (!isOpen) this.openStartMenu(e.detail === 0)
         }
@@ -1764,7 +1732,8 @@ class OpenCode95Desktop {
   }
 
   updateTrayIcons() {
-    if (this.traySoundBtn) {
+    if (this.traySoundBtn && this.traySoundsEnabled !== this.state.sounds) {
+      this.traySoundsEnabled = this.state.sounds
       this.traySoundBtn.innerHTML = this.state.sounds ? WIN95_ICONS.speakerOn : WIN95_ICONS.speakerOff
       this.traySoundBtn.title = this.state.sounds ? "Звуки Win95: Вкл (клик — выкл)" : "Звуки Win95: Выкл (клик — вкл)"
     }
@@ -1772,17 +1741,13 @@ class OpenCode95Desktop {
 
   renderTaskbarWindows() {
     if (!this.taskbarWindowsEl) return
-    this.taskbarWindowsEl.innerHTML = ""
     for (const w of this.windows.values()) {
       if (!w.open) continue
       const isActive = !w.minimized && this.activeWindowId === w.id
-      const btn = el(
-        "button",
-        {
-          class: `w95-tb-winbtn${isActive ? " active" : ""}`,
+      if (!w.taskbarButton) {
+        w.taskbarButton = el("button", {
+          class: "w95-tb-winbtn",
           type: "button",
-          title: w.title,
-          "aria-pressed": isActive,
           onclick: () => {
             this.closeAllMenus()
             if (w.minimized) {
@@ -1797,10 +1762,18 @@ class OpenCode95Desktop {
               this.focusWindow(w.id)
             }
           }
-        },
-        [el("span", { html: w.icon }), el("span", { text: w.title })]
-      )
-      this.taskbarWindowsEl.appendChild(btn)
+        }, [el("span", { html: w.icon }), el("span")])
+        this.taskbarWindowsEl.appendChild(w.taskbarButton)
+      }
+      const btn = w.taskbarButton
+      if (btn.title !== w.title) {
+        btn.title = w.title
+        btn.lastElementChild.textContent = w.title
+      }
+      if (btn.getAttribute("aria-pressed") !== String(isActive)) {
+        btn.setAttribute("aria-pressed", String(isActive))
+        btn.classList.toggle("active", isActive)
+      }
     }
   }
 
@@ -1808,35 +1781,54 @@ class OpenCode95Desktop {
   // CLOCK, TITLE SYNC & GLOBAL SHORTCUTS
   // ==========================================================================
   startClock() {
-    this.updateClock()
-    setInterval(() => this.updateClock(), 1000)
+    this.stopClock()
+    this.clockEvents = new AbortController()
+    const tick = () => {
+      clearTimeout(this.clockTimer)
+      this.clockTimer = null
+      if (document.hidden) return
+      const now = new Date()
+      this.updateClock(now)
+      this.clockTimer = setTimeout(tick, 60000 - now.getSeconds() * 1000 - now.getMilliseconds())
+    }
+    document.addEventListener("visibilitychange", tick, { signal: this.clockEvents.signal })
+    tick()
   }
 
-  updateClock() {
+  stopClock() {
+    clearTimeout(this.clockTimer)
+    this.clockTimer = null
+    this.clockEvents?.abort()
+    this.clockEvents = null
+  }
+
+  updateClock(now = new Date()) {
     if (!this.clockEl) return
-    const now = new Date()
+    const mm = String(now.getMinutes()).padStart(2, "0")
+    let label
     if (this.state.clock24h) {
-      const hh = String(now.getHours()).padStart(2, "0")
-      const mm = String(now.getMinutes()).padStart(2, "0")
-      this.clockEl.textContent = `${hh}:${mm}`
+      label = `${String(now.getHours()).padStart(2, "0")}:${mm}`
     } else {
-      let h = now.getHours()
-      const ampm = h >= 12 ? "PM" : "AM"
-      h = h % 12 || 12
-      const mm = String(now.getMinutes()).padStart(2, "0")
-      this.clockEl.textContent = `${h}:${mm} ${ampm}`
+      const h = now.getHours()
+      label = `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`
     }
-    this.clockEl.title = now.toLocaleDateString("ru-RU", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    })
+    if (this.clockEl.textContent !== label) this.clockEl.textContent = label
+    const day = now.toDateString()
+    if (day !== this.clockDay) {
+      this.clockDay = day
+      this.clockEl.title = now.toLocaleDateString("ru-RU", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      })
+    }
   }
 
   hookNativeThemeSelect() {
+    const triggerSelector = '[data-action="settings-theme"] [data-component="select-v2"]'
     const syncListbox = () => {
-      const trig = document.querySelector('[data-action="settings-theme"] [data-component="select-v2"]')
+      const trig = document.querySelector(triggerSelector)
       if (!trig) return
       const controlsId = trig.getAttribute("aria-controls")
       if (!controlsId) return
@@ -1993,18 +1985,23 @@ class OpenCode95Desktop {
       }
     }
 
-    const mo = new MutationObserver(() => syncListbox())
-    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-expanded", "aria-controls"] })
-    document.addEventListener(
-      "click",
-      (e) => {
-        if (e.target && e.target.closest && e.target.closest('[data-action="settings-theme"]')) {
-          setTimeout(syncListbox, 30)
-          setTimeout(syncListbox, 120)
-        }
-      },
-      true
-    )
+    // The native dropdown mounts in a portal. Watch for it only while it is opening,
+    // not for every DOM change made by the workspace and streaming transcript.
+    const observer = new MutationObserver(syncListbox)
+    let stopTimer
+    const onOpen = (e) => {
+      if (!e.target?.closest?.(triggerSelector)) return
+      if (e.type === "keydown" && !["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) return
+      if (e.type === "pointerdown" && e.button !== 0) return
+      observer.observe(document.body, { childList: true, subtree: true })
+      observer.observe(e.target.closest(triggerSelector), { attributes: true, attributeFilter: ["aria-expanded", "aria-controls"] })
+      clearTimeout(stopTimer)
+      stopTimer = setTimeout(() => observer.disconnect(), 400)
+      queueMicrotask(syncListbox)
+    }
+    document.addEventListener("pointerdown", onOpen, true)
+    document.addEventListener("click", onOpen, true)
+    document.addEventListener("keydown", onOpen, true)
   }
 
   observeTitle() {
@@ -2022,11 +2019,13 @@ class OpenCode95Desktop {
     sync()
     const titleEl = document.querySelector("title")
     if (titleEl) {
-      new MutationObserver(sync).observe(titleEl, { childList: true, subtree: true, characterData: true })
+      this.titleObserver = new MutationObserver(sync)
+      this.titleObserver.observe(titleEl, { childList: true, subtree: true, characterData: true })
     }
   }
 
   openStartMenu(focusFirst) {
+    if (!this.startMenu) this.buildStartMenu()
     this.startMenu.classList.add("open")
     this.startBtn.classList.add("open")
     this.startBtn.setAttribute("aria-expanded", "true")
@@ -2046,6 +2045,7 @@ class OpenCode95Desktop {
 
   registerGlobalEvents() {
     document.addEventListener("mousedown", (e) => {
+      if (!this.state.enabled) return
       if (
         !e.target.closest("#win95-start-menu") &&
         !e.target.closest("#win95-start-btn") &&
@@ -2066,14 +2066,14 @@ class OpenCode95Desktop {
       if (!this.state.enabled) return
       if (e.key === "Escape" && !e.ctrlKey) {
         const trigger = this.mainWindow.querySelector(".w95-menubar-group.open > button")
-          || (this.startMenu.classList.contains("open") ? this.startBtn : null)
+          || (this.startMenu?.classList.contains("open") ? this.startBtn : null)
         this.closeAllMenus()
         trigger?.focus()
       }
       // Ctrl+Escape -> Toggle Start Menu (authentic Windows 95 shortcut!)
       if (e.ctrlKey && e.key === "Escape") {
         e.preventDefault()
-        const isOpen = this.startMenu.classList.contains("open")
+        const isOpen = this.startMenu?.classList.contains("open")
         this.closeAllMenus()
         if (!isOpen) this.openStartMenu(true)
       }

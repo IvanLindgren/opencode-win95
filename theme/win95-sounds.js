@@ -15,20 +15,29 @@ class Win95SoundPlayer {
   setEnabled(enabled) {
     this.enabled = enabled
     if (enabled) return
+    this.cancelStartupRetry()
+    this.current?.()
+  }
+
+  cancelStartupRetry() {
     this.startupRetry?.abort()
-    this.current?.pause()
+    this.startupRetry = null
   }
 
   async playStartup() {
-    this.startupRetry?.abort()
+    this.cancelStartupRetry()
     const retry = new AbortController()
     this.startupRetry = retry
     const result = await this.play("startup")
-    if (result !== "NotAllowedError" || !this.enabled || retry.signal.aborted) return
+    if (retry.signal.aborted) return
+    if (result !== "NotAllowedError" || !this.enabled) {
+      this.cancelStartupRetry()
+      return
+    }
 
     const resume = () => {
       if (!navigator.userActivation.isActive) return
-      retry.abort()
+      this.cancelStartupRetry()
       void this.play("startup")
     }
     window.addEventListener("click", resume, { capture: true, signal: retry.signal })
@@ -40,35 +49,42 @@ class Win95SoundPlayer {
     const file = files[name]
     if (!file) return
 
-    this.current?.pause()
+    this.current?.()
     const audio = new Audio(new URL("./sounds/" + file, import.meta.url))
     audio.volume = name === "startup" ? 0.55 : 0.45
-    this.current = audio
+    const listeners = new AbortController()
+    let timeout
+    let resolveEnd
+    const end = waitForEnd ? new Promise((resolve) => { resolveEnd = resolve }) : null
+    const finish = () => {
+      if (listeners.signal.aborted) return
+      listeners.abort()
+      clearTimeout(timeout)
+      this.current = null
+      audio.pause()
+      audio.removeAttribute("src")
+      audio.load()
+      resolveEnd?.()
+    }
+    this.current = finish
+    for (const event of ["ended", "error"]) {
+      audio.addEventListener(event, finish, { once: true, signal: listeners.signal })
+    }
 
     try {
       if (waitForEnd) {
-        // Preserve the whole shutdown cue without blocking app exit on a media error.
-        await new Promise((resolve) => {
-          const listeners = new AbortController()
-          const finish = () => {
-            clearTimeout(timeout)
-            listeners.abort()
-            resolve()
-          }
-          const timeout = setTimeout(finish, 1700)
-          for (const event of ["ended", "pause", "error"]) {
-            audio.addEventListener(event, finish, { once: true, signal: listeners.signal })
-          }
-          audio.play().catch(finish)
-        })
+        // Preserve the shutdown cue without blocking app exit if media stalls.
+        timeout = setTimeout(finish, 1700)
+        audio.play().catch(finish)
+        await end
       } else {
         await audio.play()
       }
     } catch (error) {
+      finish()
       return error.name
     }
   }
 }
 
 export const sounds = new Win95SoundPlayer()
-
