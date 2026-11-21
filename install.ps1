@@ -26,6 +26,18 @@ New-Item -ItemType Directory -Force -Path $themeDst | Out-Null
 foreach ($item in (Get-ChildItem -LiteralPath $themeSrc)) {
   if ($item.Name -eq "guard.log") { continue }
   if ($item.Name -eq "state.json" -and (Test-Path -LiteralPath (Join-Path $themeDst "state.json"))) { continue }
+  if ($item.Name -eq "clippy") {
+    $clippyDst = Join-Path $themeDst "clippy"
+    foreach ($name in @("src", "tools", "media")) {
+      New-Item -ItemType Directory -Force -Path (Join-Path $clippyDst $name) | Out-Null
+    }
+    # Ship sources only; keep generated artwork and dependencies local.
+    foreach ($name in @("package.json", "bun.lock", "tsconfig.json", "vite.config.ts", "tools/extract-clippit97.ps1", "tools/clippit97.py", "media/README.md")) {
+      Copy-Item -LiteralPath (Join-Path $item.FullName $name) -Destination (Join-Path $clippyDst $name) -Force
+    }
+    Copy-Item -Path (Join-Path $item.FullName "src\*") -Destination (Join-Path $clippyDst "src") -Recurse -Force
+    continue
+  }
   Copy-Item -LiteralPath $item.FullName -Destination $themeDst -Recurse -Force
 }
 

@@ -19,6 +19,8 @@ const env = {
 }
 const srcTheme = path.join(dir, "theme")
 const theme = path.join(env.USERPROFILE, ".config", "opencode", "win95-theme")
+const clippySource = path.join(srcTheme, "clippy")
+const clippyTarget = path.join(theme, "clippy")
 const asar = path.join(dir, "Custom üpdate", "resources", "app.asar")
 const startup = path.join(env.APPDATA, "Microsoft", "Windows", "Start Menu", "Programs", "Startup", "OpenCodeWin95Guard.vbs")
 const stateFile = path.join(theme, "state.json")
@@ -62,6 +64,15 @@ try {
   fs.mkdirSync(path.dirname(asar), { recursive: true })
   fs.writeFileSync(asar, "patched")
   fs.mkdirSync(theme, { recursive: true })
+  for (const name of ["package.json", "bun.lock", "tsconfig.json", "vite.config.ts", "src/gui.tsx",
+    "tools/extract-clippit97.ps1", "tools/clippit97.py", "media/README.md"]) {
+    fs.mkdirSync(path.dirname(path.join(clippySource, name)), { recursive: true })
+    fs.copyFileSync(path.join(source, "theme", "clippy", name), path.join(clippySource, name))
+  }
+  fs.mkdirSync(path.join(clippySource, "node_modules"))
+  fs.writeFileSync(path.join(clippySource, "media", "still.webp"), "local dev artwork")
+  fs.mkdirSync(path.join(clippyTarget, "media"), { recursive: true })
+  fs.writeFileSync(path.join(clippyTarget, "media", "still.webp"), "installed artwork")
   const savedState = '{"enabled":false,"wallpaper":"clouds"}\n'
   fs.writeFileSync(stateFile, savedState)
 
@@ -74,6 +85,9 @@ try {
   }
   assert.deepEqual(JSON.parse(fs.readFileSync(events, "utf8")), { mode: "--check", asar })
   assert.equal(fs.readFileSync(stateFile, "utf8"), savedState)
+  assert.ok(fs.existsSync(path.join(clippyTarget, "src", "gui.tsx")))
+  assert.ok(!fs.existsSync(path.join(clippyTarget, "node_modules")))
+  assert.equal(fs.readFileSync(path.join(clippyTarget, "media", "still.webp"), "utf8"), "installed artwork")
   pid = guardPid()
   assert.ok(pid, "Expected a running guard")
   assert.ok(process.kill(pid, 0))

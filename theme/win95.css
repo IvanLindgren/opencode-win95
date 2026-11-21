@@ -1954,6 +1954,34 @@ html[data-win95="on"] #root [contenteditable="true"] {
   padding: 6px 8px !important;
 }
 
+/* The composer reuses this control for Send, Stop, and queued messages. */
+html[data-win95="on"] button:is([data-action="composer-submit"], [data-action="prompt-submit"]),
+html[data-win95="on"] button:is([data-action="composer-submit"], [data-action="prompt-submit"]):hover:not(:disabled) {
+  background: var(--w95-face) !important;
+  color: var(--w95-text) !important;
+  border: 0 !important;
+  box-shadow: var(--w95-bevel-out) !important;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+html[data-win95="on"] button:is([data-action="composer-submit"], [data-action="prompt-submit"]):active:not(:disabled) {
+  box-shadow: var(--w95-bevel-pressed) !important;
+}
+
+html[data-win95="on"] button:is([data-action="composer-submit"], [data-action="prompt-submit"]):disabled {
+  color: color-mix(in srgb, var(--w95-text) 58%, var(--w95-face)) !important;
+  opacity: 1 !important;
+}
+
+html[data-win95="on"] button:is([data-action="composer-submit"], [data-action="prompt-submit"]) [data-slot="icon-svg"] {
+  color: inherit !important;
+}
+
+html[data-win95="on"] #root button:is([data-action="composer-submit"], [data-action="prompt-submit"]):focus-visible {
+  outline-color: currentColor !important;
+}
+
 /* 5. CRITICAL Z-INDEX GUARANTEE: Scrim strictly BELOW Dialog Content, and BOTH strictly ABOVE Win95 Windows! */
 html[data-win95="on"] [data-component="dialog-overlay"] {
   z-index: 9640 !important;

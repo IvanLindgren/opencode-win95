@@ -5,3 +5,9 @@ Thumbs.db
 *.log
 /theme/win95-guard*.exe
 /theme/win95-guard*.exe.backup
+/theme/clippy/node_modules/
+/theme/clippy/dist/
+/theme/clippy/media/*.webp
+/theme/clippy/clippit-layers/
+/theme/clippy/tools/__pycache__/
+/theme/clippy/**/*.act

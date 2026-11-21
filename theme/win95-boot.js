@@ -93,6 +93,42 @@
   try {
     var NativeAudio = window.Audio
     if (typeof NativeAudio === "function") {
+      var chimesSrc = "win95://theme/sounds/chimes.wav"
+      var nativeChimes = []
+      var fallbackChimes = []
+
+      function chimesEnabled() {
+        var state = document.documentElement.dataset
+        return state.win95 === "on" && state.win95Sounds !== "off"
+      }
+
+      function takeChime(entries, since) {
+        var index = entries.findIndex(function (entry) { return entry.at >= since })
+        if (index === -1) return false
+        entries.splice(0, index + 1)
+        return true
+      }
+
+      function playChime(entries, play) {
+        var entry = { at: performance.now() }
+        entries.push(entry)
+        if (entries.length > 32) entries.shift()
+        return play().catch(function (error) {
+          var index = entries.indexOf(entry)
+          if (index !== -1) entries.splice(index, 1)
+          throw error
+        })
+      }
+
+      // Pair native notifications and the plugin's fallback one-to-one, rather
+      // than globally silencing completions when several open tasks finish.
+      window.__WIN95_PLAY_COMPLETION__ = function (receivedAt) {
+        if (!chimesEnabled() || takeChime(nativeChimes, receivedAt - 100)) return
+        var audio = new NativeAudio(chimesSrc)
+        audio.volume = 0.45
+        void playChime(fallbackChimes, function () { return audio.play() }).catch(function () {})
+      }
+
       // Small Vite assets are data URLs with no filename. Match the known
       // OpenCode 2.3.2 clips by URL length and FNV-1a hash, not by MIME type alone.
       // Keep only fingerprints, not another copy of the app's audio.
@@ -157,7 +193,15 @@
             }
           }
         } catch (e) {}
-        return resolved !== undefined ? new NativeAudio(resolved) : new NativeAudio()
+        var audio = resolved !== undefined ? new NativeAudio(resolved) : new NativeAudio()
+        if (resolved === chimesSrc && src !== chimesSrc) {
+          var play = audio.play.bind(audio)
+          audio.play = function () {
+            if (!chimesEnabled() || takeChime(fallbackChimes, performance.now() - 600)) return Promise.resolve()
+            return playChime(nativeChimes, play)
+          }
+        }
+        return audio
       }
       Win95Audio.prototype = NativeAudio.prototype
       window.Audio = Win95Audio

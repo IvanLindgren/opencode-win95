@@ -1,0 +1,214 @@
+html[data-win95="on"] .clippy95-dock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 7px;
+  max-width: 100%;
+  margin-inline-start: auto;
+  padding: 4px 9px 6px;
+  color: var(--w95-text, #000);
+  font: 12px/1.35 var(--w95-font-ui, Tahoma, Arial, sans-serif);
+  pointer-events: auto;
+}
+
+html[data-win95="on"] .clippy95-note {
+  position: relative;
+  flex: 0 1 380px;
+  min-width: 0;
+  background: var(--w95-tooltip-bg, #ffffe1);
+  border: 1px solid #000;
+  color: var(--w95-tooltip-text, #000);
+  box-shadow: inset 1px 1px #fff, 2px 2px #0004;
+}
+
+.clippy95-note::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -5px;
+  bottom: 17px;
+  width: 8px;
+  height: 8px;
+  border: solid #000;
+  border-width: 1px 1px 0 0;
+  transform: rotate(45deg);
+  background: inherit;
+  pointer-events: none;
+}
+
+.clippy95-note:dir(rtl)::after { transform: rotate(225deg); }
+
+.clippy95-title {
+  min-height: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-block: 2px;
+  padding-inline: 7px 3px;
+  background: var(--w95-title-active, #000080);
+  color: var(--w95-title-active-text, #fff);
+  font-weight: 700;
+}
+
+.clippy95-body {
+  padding: 8px 10px 9px;
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.clippy95-status-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clippy95-led {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-block-start: .4em;
+  border: 1px solid #444;
+  background: #a0a0a0;
+}
+
+.clippy95-dock:is([data-mode="plan"], [data-mode="read"], [data-mode="edit"], [data-mode="check"], [data-mode="wrap"]) .clippy95-led {
+  background: #244bc4;
+}
+.clippy95-dock[data-mode="done"] .clippy95-led { background: #008040; }
+.clippy95-dock[data-mode="ask"] .clippy95-led { background: #ffc428; }
+.clippy95-dock[data-mode="stopped"] .clippy95-led { background: #b84a40; }
+
+.clippy95-status {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.clippy95-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  width: 100%;
+  font-size: 11px;
+}
+
+.clippy95-progress {
+  flex: 1 1 34px;
+  height: 14px;
+  padding: 2px;
+  background: var(--w95-face, #c0c0c0);
+  box-shadow: var(--w95-bevel-in, inset 1px 1px #555, inset -1px -1px white);
+  overflow: hidden;
+}
+
+.clippy95-progress > span {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--w95-title-active, #000080) 0 6px, transparent 6px 8px);
+}
+
+.clippy95-progress > .clippy95-progress-unknown {
+  width: 24%;
+  animation: clippy95-indeterminate 2s steps(10) infinite alternate;
+}
+
+.clippy95-progress:dir(rtl) { --clippy95-travel: -300%; }
+.clippy95-numeral { min-width: 4ch; font-variant-numeric: tabular-nums; text-align: end; }
+.clippy95-eta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clippy95-eta > span { padding-inline: 3px; background: #80808016; }
+
+html[data-win95="on"] :is(.clippy95-dock, .clippy95-dialog) button:not(.clippy95-mascot) {
+  min-height: 21px;
+  padding: 1px 8px;
+  background: var(--w95-face, #c0c0c0);
+  color: var(--w95-text, #000);
+  box-shadow: var(--w95-bevel-out, inset 1px 1px #fff, inset -1px -1px #333);
+  font: inherit;
+}
+
+html[data-win95="on"] .clippy95-title button.clippy95-collapse {
+  display: grid;
+  place-items: end center;
+  flex: 0 0 18px;
+  height: 17px;
+  min-height: 0;
+  padding: 0 0 4px;
+}
+
+.clippy95-collapse span { width: 7px; height: 2px; background: currentColor; }
+
+html[data-win95="on"] :is(.clippy95-dock, .clippy95-dialog) button:not(.clippy95-mascot):active {
+  box-shadow: var(--w95-bevel-in, inset 1px 1px #555, inset -1px -1px white);
+}
+
+.clippy95-mascot {
+  position: relative;
+  flex: 0 0 88px;
+  height: 66px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.clippy95-mascot:hover { background: #80808029; }
+.clippy95-mascot img { display: block; width: 88px; height: 66px; image-rendering: pixelated; }
+.clippy95-mascot > .clippy95-led { position: absolute; inset-inline-end: 4px; bottom: 4px; }
+.clippy95-media-missing { visibility: hidden; }
+.clippy95-fallback { position: absolute; inset: 0; display: grid; place-items: center; color: var(--w95-text); }
+:is(.clippy95-dock, .clippy95-dialog) :is(button, input, select):focus-visible {
+  outline: 1px dotted currentColor;
+  outline-offset: -3px;
+}
+
+@keyframes clippy95-indeterminate { to { transform: translateX(var(--clippy95-travel, 300%)); } }
+
+html[data-win95="on"] .clippy95-dialog { display: grid; gap: 11px; color: var(--w95-text, #000); }
+.clippy95-dialog-heading {
+  background: var(--w95-tooltip-bg, #ffffe1);
+  color: var(--w95-tooltip-text, #000);
+  border: 1px solid #333;
+  padding: 7px 8px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.clippy95-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 5px 8px 8px;
+  border: 1px solid #888;
+}
+
+.clippy95-field legend { padding-inline: 4px; font-weight: 700; }
+.clippy95-field :is(select, input:not([type="checkbox"])) {
+  width: 100%;
+  padding: 3px 6px;
+  background: var(--w95-window-bg, #fff);
+  color: var(--w95-text, #000);
+  border: 1px solid #555;
+}
+.clippy95-choice { display: flex; align-items: flex-start; gap: 7px; }
+.clippy95-choice small { display: block; opacity: .8; }
+.clippy95-field p { margin: 0; }
+.clippy95-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.clippy95-error { color: #9b0000; }
+.clippy95-result { overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+  .clippy95-dock .clippy95-progress-unknown { animation: none; }
+}

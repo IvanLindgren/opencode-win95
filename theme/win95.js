@@ -1,4 +1,5 @@
 import { WIN95_ICONS, WIN95_CURSORS } from "./win95-icons.js"
+import { shellText } from "./win95-i18n.mjs"
 import { sounds } from "./win95-sounds.js"
 
 function clamp(value, min, max) {
@@ -17,23 +18,14 @@ const DEFAULT_STATE = {
   windowBounds: null
 }
 
-const WALLPAPERS = [
-  { id: "teal", name: "(Классика) Бирюзовый #008080", desc: "Стандартный рабочий стол Windows 95" },
-  { id: "woven", name: "Плетёное золото (Win95 Classic)", desc: "Классический узор плетёнки со 2-го скрина" },
-  { id: "clouds", name: "Облака (Clouds 95)", desc: "Легендарное голубое небо Windows 95" },
-  { id: "bricks", name: "Кирпичи (Red Bricks)", desc: "Классическая плитка кирпичей Win95" },
-  { id: "tartan", name: "Шотландка (Tartan Plaid)", desc: "Клетчатый узор рабочего стола 1995" },
-  { id: "steel", name: "Синяя сталь (Blue Rivets)", desc: "Металлический паттерн Windows 95" },
-  { id: "forest", name: "Лес (Plus! Forest)", desc: "Тёмно-зелёная ретро-шахматка" },
-  { id: "midnight", name: "Полночь 95 (Starfield)", desc: "Ночной космос с пиксельными звёздами" }
-]
+const WALLPAPERS = ["teal", "woven", "clouds", "bricks", "tartan", "steel", "forest", "midnight"]
 
 const SCHEMES = [
-  { id: "standard", name: "Windows Standard (Серебро + Синий)" },
-  { id: "slate", name: "Windows Slate (Серо-синий)" },
-  { id: "desert", name: "Desert 95 (Песочный + Бирюзовый)" },
-  { id: "plum", name: "Plum 95 (Сливовый ретро)" },
-  { id: "hc-dark", name: "High Contrast Dark 95 (Ночной)" }
+  { id: "standard", name: "Windows Standard" },
+  { id: "slate", name: "Windows Slate" },
+  { id: "desert", name: "Desert 95" },
+  { id: "plum", name: "Plum 95" },
+  { id: "hc-dark", name: "High Contrast Dark 95" }
 ]
 
 const WELCOME_TIPS = [
@@ -60,6 +52,21 @@ const CAP_MAX_SVG = `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><rect
 const CAP_RESTORE_SVG = `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><rect x="3" y="1" width="6" height="2" fill="currentColor"/><rect x="8" y="1" width="1" height="6" fill="currentColor"/><rect x="1" y="3" width="6" height="2" fill="currentColor"/><rect x="1" y="3" width="1" height="6" fill="currentColor"/><rect x="6" y="3" width="1" height="6" fill="currentColor"/><rect x="1" y="8" width="6" height="1" fill="currentColor"/></svg>`
 const CAP_CLOSE_SVG = `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><path d="M1,1 L3,1 L5,3.5 L7,1 L9,1 L6,5 L9,9 L7,9 L5,6.5 L3,9 L1,9 L4,5 Z" fill="currentColor"/></svg>`
 
+function t(key) {
+  return shellText(document.documentElement.lang, key)
+}
+
+function setTextKey(node, key) {
+  node.dataset.w95Label = key
+  node.textContent = t(key)
+}
+
+function setTitleKey(node, key) {
+  node.dataset.w95Title = key
+  node.title = t(key)
+  node.setAttribute("aria-label", node.title)
+}
+
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag)
   for (const [k, v] of Object.entries(attrs)) {
@@ -67,6 +74,8 @@ function el(tag, attrs = {}, children = []) {
     else if (k === "style" && typeof v === "object") Object.assign(node.style, v)
     else if (k === "html") node.innerHTML = v
     else if (k === "text") node.textContent = v
+    else if (k === "textKey" && v) setTextKey(node, v)
+    else if (k === "titleKey" && v) setTitleKey(node, v)
     else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2).toLowerCase(), v)
     else if (v !== undefined && v !== null) node.setAttribute(k, String(v))
   }
@@ -128,6 +137,13 @@ class OpenCode95Desktop {
 
     this.buildNormalControls()
     this.registerGlobalEvents()
+    new MutationObserver(() => {
+      this.closeAllMenus()
+      for (const node of document.querySelectorAll("[data-w95-label]")) setTextKey(node, node.dataset.w95Label)
+      for (const node of document.querySelectorAll("[data-w95-title]")) setTitleKey(node, node.dataset.w95Title)
+      this.renderTaskbarWindows()
+      this.updateClock()
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] })
     this.hookNativeThemeSelect()
     if (this.state.enabled) this.activateShell()
 
@@ -298,7 +314,7 @@ class OpenCode95Desktop {
         "button",
         {
           class: "w95-return-btn",
-          title: "Вернуться в тему Windows 95",
+          titleKey: "restoreTheme",
           onclick: () => this.toggleWin95Mode(true)
         },
         [
@@ -306,9 +322,9 @@ class OpenCode95Desktop {
           "Win95"
         ]
       ),
-      el("button", { class: "w95-norm-winbtn", title: "Свернуть", text: "─", onclick: () => this.runHostAction("window.minimize") }),
-      el("button", { class: "w95-norm-winbtn", title: "Развернуть", text: "☐", onclick: () => this.runHostAction("window.toggleMaximize") }),
-      el("button", { class: "w95-norm-winbtn close", title: "Закрыть", text: "✕", onclick: () => this.runHostAction("window.close") })
+      el("button", { class: "w95-norm-winbtn", titleKey: "minimize", text: "─", onclick: () => this.runHostAction("window.minimize") }),
+      el("button", { class: "w95-norm-winbtn", titleKey: "maximize", text: "☐", onclick: () => this.runHostAction("window.toggleMaximize") }),
+      el("button", { class: "w95-norm-winbtn close", titleKey: "close", text: "✕", onclick: () => this.runHostAction("window.close") })
     ])
     document.body.appendChild(this.normalControls)
   }
@@ -320,7 +336,7 @@ class OpenCode95Desktop {
     // Slim top Electron Host Bar (for moving/snapping/closing Electron host window)
     this.hostMaxBtn = el("button", {
       class: "w95-cap-btn",
-      title: "Развернуть окно приложения",
+      titleKey: "maximize",
       html: this.hostMaximized ? CAP_RESTORE_SVG : CAP_MAX_SVG,
       onclick: () => this.runHostAction("window.toggleMaximize")
     })
@@ -332,20 +348,20 @@ class OpenCode95Desktop {
       el("div", { class: "w95-host-actions" }, [
         el("button", {
           class: "w95-host-pill",
-          title: "Переключить обратно на стандартный интерфейс OpenCode",
-          text: "Обычный UI",
+          titleKey: "switchStandard",
+          textKey: "standard",
           onclick: () => this.toggleWin95Mode(false)
         }),
         el("button", {
           class: "w95-cap-btn",
-          title: "Свернуть в панель задач Windows",
+          titleKey: "minimize",
           html: CAP_MIN_SVG,
           onclick: () => this.runHostAction("window.minimize")
         }),
         this.hostMaxBtn,
         el("button", {
           class: "w95-cap-btn",
-          title: "Закрыть OpenCode",
+          titleKey: "close",
           html: CAP_CLOSE_SVG,
           onclick: () => this.openWindow("shutdown")
         })
@@ -449,7 +465,7 @@ class OpenCode95Desktop {
     this.mainTitleText = el("span", { class: "w95-titlebar-text", text: "OpenCode 95 — Workspace" })
     this.mainMaxBtn = el("button", {
       class: "w95-cap-btn",
-      title: "Развернуть / Восстановить окно",
+      titleKey: "maximize",
       html: this.state.windowMaximized ? CAP_RESTORE_SVG : CAP_MAX_SVG,
       onclick: (e) => {
         e.stopPropagation()
@@ -474,7 +490,7 @@ class OpenCode95Desktop {
         el("div", { class: "w95-titlebar-controls" }, [
           el("button", {
             class: "w95-cap-btn",
-            title: "Свернуть на панель задач",
+            titleKey: "minimize",
             html: CAP_MIN_SVG,
             onclick: (e) => {
               e.stopPropagation()
@@ -484,7 +500,7 @@ class OpenCode95Desktop {
           this.mainMaxBtn,
           el("button", {
             class: "w95-cap-btn",
-            title: "Свернуть окно (Shift+клик — Завершение работы)",
+            titleKey: "hideWindow",
             html: CAP_CLOSE_SVG,
             onclick: (e) => {
               e.stopPropagation()
@@ -499,7 +515,9 @@ class OpenCode95Desktop {
     const menubar = this.buildMainMenuBar()
     const viewport = el("div", { id: "win95-main-viewport" })
 
-    this.statusLeft = el("div", { class: "w95-status-pane grow", text: "Готово — OpenCode 95 Desktop" })
+    this.statusLeft = el("div", { class: "w95-status-pane grow" }, [
+      el("span", { textKey: "ready" }), " — ", el("span", { text: "OpenCode 95 Desktop" })
+    ])
     this.statusRight = el("div", { class: "w95-status-pane", text: `v${this.sysInfo.version}` })
     const statusbar = el("div", { id: "win95-main-statusbar" }, [
       this.statusLeft,
@@ -620,8 +638,8 @@ class OpenCode95Desktop {
           { label: "Zoom Out", accel: "Ctrl+-", action: () => this.runHostAction("view.zoomOut") },
           { label: "Actual Size", accel: "Ctrl+0", action: () => this.runHostAction("view.resetZoom") },
           { sep: true },
-          { label: "Display Properties (Обои и тема)...", action: () => this.openWindow("display") },
-          { label: "Switch to Normal OpenCode UI", action: () => this.toggleWin95Mode(false) },
+          { labelKey: "display", action: () => this.openWindow("display") },
+          { labelKey: "switchStandard", action: () => this.toggleWin95Mode(false) },
           { sep: true },
           { label: "Reload Interface", accel: "Ctrl+R", action: () => this.runHostAction("view.reload") },
           { label: "Developer Tools", action: () => this.runHostAction("view.toggleDevTools") }
@@ -684,7 +702,7 @@ class OpenCode95Desktop {
                 }
               },
               [
-                el("span", { text: item.label }),
+                el("span", { text: item.label, textKey: item.labelKey }),
                 item.accel ? el("span", { class: "w95-accel", text: item.accel }) : null
               ]
             )
@@ -732,16 +750,16 @@ class OpenCode95Desktop {
   // ==========================================================================
   // WINDOW MANAGER HELPERS
   // ==========================================================================
-  createExtraWindow({ id, title, icon, width, height, bodyEl }) {
+  createExtraWindow({ id, title, titleKey, icon, width, height, bodyEl }) {
     const titlebar = el("div", { class: "w95-titlebar" }, [
       el("div", { class: "w95-titlebar-left" }, [
         icon ? el("span", { html: icon }) : null,
-        el("span", { class: "w95-titlebar-text", text: title })
+        el("span", { class: "w95-titlebar-text", text: title, textKey: titleKey })
       ]),
       el("div", { class: "w95-titlebar-controls" }, [
         el("button", {
           class: "w95-cap-btn",
-          title: "Свернуть",
+          titleKey: "minimize",
           html: CAP_MIN_SVG,
           onclick: (e) => {
             e.stopPropagation()
@@ -750,7 +768,7 @@ class OpenCode95Desktop {
         }),
         el("button", {
           class: "w95-cap-btn",
-          title: "Закрыть",
+          titleKey: "close",
           html: CAP_CLOSE_SVG,
           onclick: (e) => {
             e.stopPropagation()
@@ -772,7 +790,7 @@ class OpenCode95Desktop {
     )
 
     if (height) winEl.style.setProperty("--w95-dialog-height", `${height}px`)
-    const w = { id, title, icon: icon || WIN95_ICONS.winFlag, el: winEl, open: false, minimized: false }
+    const w = { id, title, titleKey, icon: icon || WIN95_ICONS.winFlag, el: winEl, open: false, minimized: false }
     this.makeDraggable(winEl, titlebar, () => true, ({ left, top }) => {
       this.dialogPositions.set(id, { left, top })
     })
@@ -984,7 +1002,7 @@ class OpenCode95Desktop {
           }),
           el("button", {
             class: "w95-btn",
-            text: "Display / Обои...",
+            textKey: "display",
             onclick: () => this.openWindow("display")
           }),
           el("button", {
@@ -1003,7 +1021,7 @@ class OpenCode95Desktop {
           el("div", { class: "w95-menu-sep", style: { margin: "8px 0" } }),
           el("button", {
             class: "w95-btn default-btn",
-            text: "Close",
+            textKey: "close",
             onclick: () => this.closeWindow("welcome")
           })
         ])
@@ -1011,7 +1029,7 @@ class OpenCode95Desktop {
       el("div", { class: "w95-welcome-footer" }, [
         el("label", { style: { display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer" } }, [
           showCheck,
-          "Показывать это окно приветствия при следующем запуске OpenCode 95"
+          el("span", { textKey: "showWelcome" })
         ])
       ])
     ])
@@ -1038,14 +1056,10 @@ class OpenCode95Desktop {
       el("div", { class: "w95-crt-mini-tb" })
     ])
 
-    const wpDesc = el("div", {
-      style: { fontSize: "11px", color: "var(--w95-text-muted)", marginTop: "6px" }
-    })
-
-    const wpRows = WALLPAPERS.map((wp) => el("div", {
+    const wpRows = WALLPAPERS.map((id) => el("div", {
       class: "w95-listbox-item",
-      text: wp.name,
-      onclick: () => this.persistState({ wallpaper: wp.id })
+      textKey: id,
+      onclick: () => this.persistState({ wallpaper: id })
     }))
     const wpList = el("div", { class: "w95-listbox" }, wpRows)
 
@@ -1054,9 +1068,8 @@ class OpenCode95Desktop {
         el("div", { class: "w95-crt-monitor" }, [previewScreen])
       ]),
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Wallpaper / Обои рабочего стола" }),
-        wpList,
-        wpDesc
+        el("legend", { textKey: "wallpaper" }),
+        wpList
       ])
     ])
 
@@ -1069,15 +1082,15 @@ class OpenCode95Desktop {
 
     const tabAppearance = el("div", { style: { display: "none" } }, [
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Цветовая схема Windows 95" }),
+        el("legend", { textKey: "colors" }),
         schemeList
       ]),
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Расположение окна OpenCode" }),
+        el("legend", { textKey: "layout" }),
         el("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } }, [
           el("button", {
             class: "w95-btn",
-            text: "Плавающее окно (видны ярлыки)",
+            textKey: "floating",
             onclick: () => {
               this.mainWindow.classList.remove("maximized")
               this.mainMaxBtn.innerHTML = CAP_MAX_SVG
@@ -1087,7 +1100,7 @@ class OpenCode95Desktop {
           }),
           el("button", {
             class: "w95-btn",
-            text: "Развернуть на весь рабочий стол",
+            textKey: "fillDesktop",
             onclick: () => {
               this.mainWindow.classList.add("maximized")
               this.mainMaxBtn.innerHTML = CAP_RESTORE_SVG
@@ -1125,24 +1138,24 @@ class OpenCode95Desktop {
 
     const tabSounds = el("div", { style: { display: "none" } }, [
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Эффекты и атмосфера" }),
+        el("legend", { textKey: "effects" }),
         el("div", { style: { display: "flex", flexDirection: "column", gap: "8px" } }, [
           el("label", { style: { display: "flex", alignItems: "center", gap: "6px" } }, [
             chkSounds,
-            "Включить ретро-звуки Windows 95"
+            el("span", { textKey: "sounds" })
           ]),
           el("label", { style: { display: "flex", alignItems: "center", gap: "6px" } }, [
             chkCursor,
-            "Включить пиксельные курсоры Windows 95"
+            el("span", { textKey: "pixelCursor" })
           ]),
           el("label", { style: { display: "flex", alignItems: "center", gap: "6px" } }, [
             chkWelcome,
-            "Показывать окно «Welcome to OpenCode 95» при старте"
+            el("span", { textKey: "showWelcome" })
           ])
         ])
       ]),
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Тест системных звуков" }),
+        el("legend", { textKey: "soundTest" }),
         el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [
           el("button", { class: "w95-btn", text: "▶ Startup", onclick: () => sounds.play("startup") }),
           el("button", { class: "w95-btn", text: "▶ Ding", onclick: () => sounds.play("ding") }),
@@ -1155,33 +1168,35 @@ class OpenCode95Desktop {
 
     const tabMode = el("div", { style: { display: "none" } }, [
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Переключатель интерфейса" }),
+        el("legend", { textKey: "uiMode" }),
         el("p", {
           style: { margin: "0 0 10px 0" },
-          text: "Вы можете в любой момент выключить режим Windows 95 и вернуться к оригинальному интерфейсу OpenCode без перезапуска. В обычном режиме справа сверху останется кнопка «Win95» для мгновенного возврата."
+          textKey: "modeHint"
         }),
         el("button", {
           class: "w95-btn",
-          text: "Переключиться на стандартный OpenCode UI",
+          textKey: "switchStandard",
           onclick: () => this.toggleWin95Mode(false)
         })
       ]),
       el("fieldset", { class: "w95-fieldset" }, [
-        el("legend", { text: "Файлы темы и откат" }),
+        el("legend", { textKey: "themeFiles" }),
         el("div", {
-          style: { fontFamily: "var(--w95-font-mono)", fontSize: "10px", lineHeight: "1.5", userSelect: "text" },
-          html: `Папка темы: %USERPROFILE%\\.config\\opencode\\win95-theme\\<br/>Откат оригинала: restore.ps1`
-        })
+          style: { fontFamily: "var(--w95-font-mono)", fontSize: "10px", lineHeight: "1.5", userSelect: "text" }
+        }, [
+          el("span", { textKey: "themeFolder" }), " %USERPROFILE%\\.config\\opencode\\win95-theme\\", el("br"),
+          el("span", { textKey: "restore" }), " restore.ps1"
+        ])
       ])
     ])
 
     const panels = [tabBackground, tabAppearance, tabSounds, tabMode]
-    const tabLabels = ["Background", "Appearance", "Sounds & Cursor", "UI Mode"]
+    const tabLabels = ["wallpaper", "appearance", "effects", "uiMode"]
     const tabStrip = el("div", { class: "w95-tabs-strip" })
     const tabBtns = tabLabels.map((lbl, idx) => {
       const b = el("button", {
         class: `w95-tab-btn${idx === 0 ? " active" : ""}`,
-        text: lbl,
+        textKey: lbl,
         onclick: () => {
           tabBtns.forEach((x, i) => x.classList.toggle("active", i === idx))
           panels.forEach((p, i) => (p.style.display = i === idx ? "block" : "none"))
@@ -1202,7 +1217,7 @@ class OpenCode95Desktop {
         }),
         el("button", {
           class: "w95-btn",
-          text: "Close",
+          textKey: "close",
           onclick: () => this.closeWindow("display")
         })
       ])
@@ -1211,18 +1226,17 @@ class OpenCode95Desktop {
     this.syncDisplayUI = () => {
       const { wallpaper, colorScheme } = this.state
       previewScreen.setAttribute("data-wp", wallpaper)
-      wpDesc.textContent = WALLPAPERS.find((w) => w.id === wallpaper)?.desc || ""
       chkSounds.checked = this.state.sounds
       chkCursor.checked = this.state.retroCursor
       chkWelcome.checked = this.state.showWelcome
-      wpRows.forEach((row, i) => row.classList.toggle("selected", WALLPAPERS[i].id === wallpaper))
+      wpRows.forEach((row, i) => row.classList.toggle("selected", WALLPAPERS[i] === wallpaper))
       schemeRows.forEach((row, i) => row.classList.toggle("selected", SCHEMES[i].id === colorScheme))
     }
     this.syncDisplayUI()
 
     this.createExtraWindow({
       id: "display",
-      title: "Display Properties",
+      titleKey: "display",
       icon: WIN95_ICONS.display,
       width: 420,
       height: 390,
@@ -1503,12 +1517,12 @@ class OpenCode95Desktop {
                     it.action()
                   }
                 },
-                [el("span", { html: it.icon || WIN95_ICONS.opencode }), el("span", { text: it.label })]
+                [el("span", { html: it.icon || WIN95_ICONS.opencode }), el("span", { text: it.label, textKey: it.labelKey })]
               )
         )
       )
 
-    const mkItem = ({ icon, label, sub, action }) => {
+    const mkItem = ({ icon, label, labelKey, sub, action }) => {
       const open = () => {
         this.startMenu.querySelector(".w95-start-group.submenu-open")?.classList.remove("submenu-open")
         if (!sub) return
@@ -1544,7 +1558,7 @@ class OpenCode95Desktop {
         }
       }, [
         el("span", { html: icon }),
-        el("span", { class: "w95-start-label", text: label }),
+        el("span", { class: "w95-start-label", text: label, textKey: labelKey }),
         sub ? el("span", { class: "w95-start-arrow", text: "▶" }) : null
       ])
       const group = el("div", { class: "w95-start-group", onmouseenter: open }, [trigger, sub])
@@ -1565,7 +1579,7 @@ class OpenCode95Desktop {
             { icon: WIN95_ICONS.folder, label: "Open Project...", action: () => this.triggerOpencodeCommand("project.open") },
             { icon: WIN95_ICONS.msdos, label: "MS-DOS Prompt (Terminal)", action: () => this.triggerOpencodeCommand("terminal.toggle") },
             { sep: true },
-            { icon: WIN95_ICONS.display, label: "Display Properties", action: () => this.openWindow("display") },
+            { icon: WIN95_ICONS.display, labelKey: "display", action: () => this.openWindow("display") },
             { icon: WIN95_ICONS.myComputer, label: "System Properties", action: () => this.openWindow("sysprop") },
             { icon: WIN95_ICONS.lightbulb, label: "Welcome Tour", action: () => this.openWindow("welcome") },
             { icon: WIN95_ICONS.recycleBin, label: "Recycle Bin", action: () => this.openWindow("recycle") }
@@ -1585,13 +1599,13 @@ class OpenCode95Desktop {
         }),
         mkItem({
           icon: WIN95_ICONS.controlPanel,
-          label: "Settings",
+          labelKey: "settings",
           sub: mkSub([
             { icon: WIN95_ICONS.controlPanel, label: "OpenCode Control Panel...", action: () => this.triggerOpencodeCommand("settings.open") },
-            { icon: WIN95_ICONS.display, label: "Display & Обои Win95...", action: () => this.openWindow("display") },
+            { icon: WIN95_ICONS.display, labelKey: "display", action: () => this.openWindow("display") },
             { icon: WIN95_ICONS.myComputer, label: "System Properties...", action: () => this.openWindow("sysprop") },
             { sep: true },
-            { icon: WIN95_ICONS.themeSwitch, label: "Переключить на обычный OpenCode", action: () => this.toggleWin95Mode(false) }
+            { icon: WIN95_ICONS.themeSwitch, labelKey: "switchStandard", action: () => this.toggleWin95Mode(false) }
           ])
         }),
         mkItem({
@@ -1638,9 +1652,9 @@ class OpenCode95Desktop {
       { label: "Show / Hide OpenCode", action: () => this.showDesktop() },
       { label: "Refresh Desktop", action: () => this.clearDesktopSelection() },
       { sep: true },
-      { label: "Display Properties (Обои)...", action: () => this.openWindow("display") },
+      { labelKey: "display", action: () => this.openWindow("display") },
       { label: "System Properties...", action: () => this.openWindow("sysprop") },
-      { label: "Switch to Normal OpenCode UI", action: () => this.toggleWin95Mode(false) }
+      { labelKey: "switchStandard", action: () => this.toggleWin95Mode(false) }
     ]
 
     this.contextMenu = el("div", { id: "win95-context-menu" })
@@ -1652,6 +1666,7 @@ class OpenCode95Desktop {
           el("button", {
             class: "w95-menu-entry",
             text: item.label,
+            textKey: item.labelKey,
             onclick: (e) => {
               e.stopPropagation()
               this.closeAllMenus()
@@ -1689,14 +1704,13 @@ class OpenCode95Desktop {
           if (!isOpen) this.openStartMenu(e.detail === 0)
         }
       },
-      [el("span", { html: WIN95_ICONS.winFlag }), el("span", { text: "Start" })]
+      [el("span", { html: WIN95_ICONS.winFlag }), el("span", { textKey: "start" })]
     )
 
     this.taskbarWindowsEl = el("div", { id: "win95-taskbar-windows" })
 
     this.traySoundBtn = el("button", {
       class: "w95-tray-icon",
-      title: "Звуки Windows 95 (вкл/выкл)",
       onclick: () => {
         const next = !this.state.sounds
         this.persistState({ sounds: next })
@@ -1706,14 +1720,14 @@ class OpenCode95Desktop {
 
     const traySwitchBtn = el("button", {
       class: "w95-tray-icon",
-      title: "Переключить на обычный OpenCode UI",
+      titleKey: "switchStandard",
       html: WIN95_ICONS.themeSwitch,
       onclick: () => this.toggleWin95Mode(false)
     })
 
     this.clockEl = el("div", {
       id: "win95-clock",
-      title: "Клик — переключить формат 24ч / 12ч",
+      titleKey: "clockFormat",
       onclick: () => {
         this.persistState({ clock24h: !this.state.clock24h })
         this.updateClock()
@@ -1735,7 +1749,8 @@ class OpenCode95Desktop {
     if (this.traySoundBtn && this.traySoundsEnabled !== this.state.sounds) {
       this.traySoundsEnabled = this.state.sounds
       this.traySoundBtn.innerHTML = this.state.sounds ? WIN95_ICONS.speakerOn : WIN95_ICONS.speakerOff
-      this.traySoundBtn.title = this.state.sounds ? "Звуки Win95: Вкл (клик — выкл)" : "Звуки Win95: Выкл (клик — вкл)"
+      setTitleKey(this.traySoundBtn, this.state.sounds ? "soundOn" : "soundOff")
+      this.traySoundBtn.setAttribute("aria-pressed", String(this.state.sounds))
     }
   }
 
@@ -1766,9 +1781,10 @@ class OpenCode95Desktop {
         this.taskbarWindowsEl.appendChild(w.taskbarButton)
       }
       const btn = w.taskbarButton
-      if (btn.title !== w.title) {
-        btn.title = w.title
-        btn.lastElementChild.textContent = w.title
+      const title = w.titleKey ? t(w.titleKey) : w.title
+      if (btn.title !== title) {
+        btn.title = title
+        btn.lastElementChild.textContent = title
       }
       if (btn.getAttribute("aria-pressed") !== String(isActive)) {
         btn.setAttribute("aria-pressed", String(isActive))
@@ -1813,10 +1829,11 @@ class OpenCode95Desktop {
       label = `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`
     }
     if (this.clockEl.textContent !== label) this.clockEl.textContent = label
-    const day = now.toDateString()
-    if (day !== this.clockDay) {
+    const locale = document.documentElement.lang || "en"
+    const day = `${now.toDateString()}|${locale}`
+    if (day !== this.clockDay || !this.clockEl.title) {
       this.clockDay = day
-      this.clockEl.title = now.toLocaleDateString("ru-RU", {
+      this.clockEl.title = now.toLocaleDateString(locale, {
         weekday: "long",
         year: "numeric",
         month: "long",
@@ -2014,7 +2031,7 @@ class OpenCode95Desktop {
         mainW.title = raw === "OpenCode" ? "OpenCode 95" : raw
         this.renderTaskbarWindows()
       }
-      if (this.statusLeft) this.statusLeft.textContent = `Готово — ${raw}`
+      if (this.statusLeft) this.statusLeft.lastElementChild.textContent = raw
     }
     sync()
     const titleEl = document.querySelector("title")

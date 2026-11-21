@@ -58,12 +58,55 @@ The installer uses the Node.js guard unless `win95-guard.exe` is available. To u
 powershell -ExecutionPolicy Bypass -File .\theme\build-win95-guard.ps1
 ```
 
+### Optional: add the Office 97 Clippy assistant
+
+This uses the experimental GUI plugin API in OpenCode Desktop 2.3.2. Clippy
+shows public work updates, progress, and separate estimates for the current
+step and the whole task when the agent provides them. It can open supported
+question forms and show the final reply. It doesn't read private reasoning.
+
+After installing the theme, use Bun, Node.js 20.19+ (or 22.12+), Windows
+PowerShell, and Python with Pillow. Provide your own original Office 97
+`Clippit.act` (see [asset details](theme/clippy/media/README.md)); the artwork is
+not redistributed. Run these commands from PowerShell, substituting your file:
+
+```powershell
+$act = (Resolve-Path '.\Clippit.act').Path
+Push-Location "$env:USERPROFILE\.config\opencode\win95-theme\clippy"
+bun install --frozen-lockfile --ignore-scripts
+bun run build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\extract-clippit97.ps1 -Act $act -Output .\clippit-layers
+python .\tools\clippit97.py $act .\clippit-layers .\media
+Pop-Location
+```
+
+In `%USERPROFILE%\.config\opencode\opencode.json` (or `.jsonc`), add
+`"./win95-theme/clippy"` to `plugins`, keeping your existing entries:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["./win95-theme/clippy"]
+}
+```
+
+Choose **View → Reload Interface** (`Ctrl+R`) and open a session with the Win95
+theme active. Minimizing the Clippy panel pauses its work-update subscription
+for the agent. Remove the plugin entry before uninstalling the theme if you
+enabled Clippy.
+
 ## Controls
 
 - `Settings -> Appearance -> Theme` (`Windows 95`), `Ctrl+Shift+9`, or the top bar / tray toggle button: switch between Win95 and any built-in OpenCode theme without restarting.
 - `Ctrl+Esc`: open the Start menu.
 - Right-click desktop or double-click `Display`: change wallpapers, color schemes, sounds, and pixel cursor.
 - `Ctrl+R`: reload the UI after editing files in `%USERPROFILE%\.config\opencode\win95-theme\`.
+
+Clippy and selected shell labels (including Start, the system tray, and
+Display Properties) follow OpenCode's interface language. They support
+English, Spanish, Russian, German, French, Brazilian Portuguese, Ukrainian,
+Japanese, and Simplified Chinese. Clippy uses English for unsupported
+languages. Agent messages stay in the language the agent wrote them in.
 
 The Win95 notification cues are Chimes for completion, Ding for permission and question prompts, and Chord for the default error sound. Turning Win95 sounds off mutes these cues; turning the theme off restores OpenCode's original sound behavior.
 
@@ -72,6 +115,10 @@ The Win95 notification cues are Chimes for completion, Ding for permission and q
 On Windows, run `node tests/guard.test.mjs` to check guard startup, single-instance behavior, and repair dispatch. Run `node tests/guard-install.test.mjs` to check the Startup launcher and `-NoGuard`. Add `--native` to either command after building the native executable.
 
 Run `node --test tests/notification-audio.test.mjs` to check sound routing. To also test your installed OpenCode sound assets, set `OPENCODE_AUDIO_TEST_ASAR` to the path of `app.asar` first. These tests don't modify the installation.
+
+Run `node --test tests/shell-i18n.test.mjs` for the shell language selection.
+In `theme/clippy`, run `bun install --frozen-lockfile --ignore-scripts`
+then `bun test`, `bun run typecheck`, and `bun run build`. No artwork is needed.
 
 ## Uninstall
 
